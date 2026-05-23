@@ -2358,6 +2358,149 @@
       .model-info-col { padding: 1.5rem; }
       footer { padding: 2rem 1.2rem; flex-direction: column; text-align: center; }
     }
+    /* ── ADMIN LOGIN BUTTON ── */
+    .admin-login-btn {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      background: rgba(14,17,21,0.85);
+      border: 1px solid rgba(201,169,110,0.2);
+      border-radius: 20px;
+      color: var(--muted);
+      font-family: var(--font-body);
+      font-size: .7rem;
+      font-weight: 700;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      padding: .5rem 1rem;
+      cursor: pointer;
+      backdrop-filter: blur(8px);
+      transition: all .25s;
+    }
+    .admin-login-btn:hover {
+      border-color: var(--gold);
+      color: var(--gold);
+      background: rgba(14,17,21,0.95);
+    }
+    .admin-login-btn.admin-active {
+      border-color: var(--gold);
+      color: var(--gold);
+      background: rgba(201,169,110,0.1);
+    }
+
+    /* ── ADMIN AUTH MODAL ── */
+    .admin-auth-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(6,8,10,0.88);
+      z-index: 600;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .admin-auth-modal.open { display: flex; }
+
+    .admin-auth-box {
+      background: var(--gray);
+      border: 1px solid rgba(201,169,110,0.25);
+      border-radius: 6px;
+      width: min(400px, 100%);
+      padding: 2.5rem 2rem;
+      position: relative;
+      animation: slideUp .35s cubic-bezier(.22,1,.36,1);
+    }
+    .admin-auth-close {
+      position: absolute;
+      top: 1rem; right: 1rem;
+      background: none; border: none;
+      color: var(--muted); font-size: 1.1rem;
+      cursor: pointer; transition: color .2s;
+    }
+    .admin-auth-close:hover { color: var(--white); }
+
+    .admin-auth-logo {
+      font-family: var(--font-display);
+      font-size: 1.2rem;
+      letter-spacing: .1em;
+      color: var(--gold);
+      margin-bottom: .3rem;
+    }
+    .admin-auth-title {
+      font-family: var(--font-display);
+      font-size: 2rem;
+      letter-spacing: .04em;
+      color: var(--white);
+      margin-bottom: .4rem;
+    }
+    .admin-auth-sub {
+      font-size: .82rem;
+      color: var(--muted);
+      line-height: 1.5;
+      margin-bottom: 1.8rem;
+    }
+    .admin-auth-group { margin-bottom: 1.1rem; }
+    .admin-auth-label {
+      display: block;
+      font-size: .68rem;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: .45rem;
+    }
+    .admin-auth-input {
+      width: 100%;
+      background: rgba(201,169,110,0.05);
+      border: 1px solid rgba(201,169,110,0.2);
+      border-radius: 2px;
+      padding: .78rem 1rem;
+      color: var(--white);
+      font-family: var(--font-body);
+      font-size: .9rem;
+      outline: none;
+      transition: border-color .2s;
+    }
+    .admin-auth-input:focus { border-color: var(--gold); }
+    .admin-auth-input::placeholder { color: var(--muted); opacity: .5; }
+    .admin-auth-input.error { border-color: #ff6060; }
+    .admin-auth-error {
+      font-size: .75rem;
+      color: #ff7070;
+      min-height: 1rem;
+      margin-bottom: .6rem;
+    }
+    .admin-auth-submit {
+      width: 100%;
+      background: var(--gold);
+      color: #06080a;
+      border: none;
+      border-radius: 2px;
+      padding: .9rem;
+      font-family: var(--font-body);
+      font-size: .82rem;
+      font-weight: 700;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background .2s;
+      margin-top: .3rem;
+    }
+    .admin-auth-submit:hover { background: var(--gold-deep); color: #fff; }
+    .admin-auth-note {
+      font-size: .68rem;
+      color: var(--muted);
+      text-align: center;
+      margin-top: 1rem;
+      line-height: 1.5;
+    }
+
+    /* Keep admin-mode-active class for delete buttons */
+    .admin-mode-active .card-delete-btn { display: flex; }
+
     .skeleton{background:linear-gradient(90deg,var(--gray-mid) 25%,rgba(255,255,255,.05) 50%,var(--gray-mid) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite}
     @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
     .skeleton-card{border-radius:4px;overflow:hidden;border:1px solid var(--border)}
@@ -2910,27 +3053,65 @@
       <div class="success-perk"><span class="success-perk-icon">✦</span> Direct booking enquiry enabled</div>
       <div class="success-perk"><span class="success-perk-icon">✦</span> Membership confirmation sent to your email</div>
     </div>
-    <button class="success-cta" onclick="activateMemberAndClose()">Browse the Roster →</button>
+    <button class="success-cta" onclick="closeSuccessModal()">Browse the Roster →</button>
   </div>
 </div>
 
-<!-- ══════════ PASSWORD MODAL ══════════ -->
-<div class="pw-modal" id="pwModal">
-  <div class="pw-box">
-    <div class="pw-box-title">ADMIN ACCESS</div>
-    <p class="pw-box-sub">Enter your password to manage models</p>
-    <div class="pw-input-wrap">
-      <input class="pw-input" type="password" id="pwInput" placeholder="••••••••"
-             onkeydown="if(event.key==='Enter') checkPassword()">
-      <button class="pw-toggle" onclick="togglePwVisibility()" id="pwToggle" title="Show/hide">👁</button>
+<!-- ══════════ ADMIN LOGIN BUTTON (always visible, bottom-right) ══════════ -->
+<div class="admin-login-btn" id="adminLoginBtn" onclick="openAdminModal()">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+  Admin
+</div>
+
+<!-- ══════════ ADMIN AUTH MODAL ══════════ -->
+<div class="admin-auth-modal" id="adminAuthModal">
+  <div class="admin-auth-box">
+    <button class="admin-auth-close" onclick="closeAdminModal()">✕</button>
+
+    <!-- Logged OUT state -->
+    <div id="adminAuthForm">
+      <div class="admin-auth-logo">NOVA LENS</div>
+      <div class="admin-auth-title">ADMIN LOGIN</div>
+      <p class="admin-auth-sub">Sign in with your admin credentials to manage the roster.</p>
+
+      <div class="admin-auth-group">
+        <label class="admin-auth-label">Email</label>
+        <input class="admin-auth-input" id="adminEmail" type="email" placeholder="admin@novalens.studio"
+               onkeydown="if(event.key==='Enter')doAdminLogin()">
+      </div>
+      <div class="admin-auth-group">
+        <label class="admin-auth-label">Password</label>
+        <input class="admin-auth-input" id="adminPassword" type="password" placeholder="••••••••"
+               onkeydown="if(event.key==='Enter')doAdminLogin()">
+      </div>
+      <div class="admin-auth-error" id="adminAuthError"></div>
+      <button class="admin-auth-submit" id="adminAuthBtn" onclick="doAdminLogin()">
+        Sign In as Admin →
+      </button>
+      <p class="admin-auth-note">Admin accounts are managed separately from member accounts.</p>
     </div>
-    <div class="pw-error" id="pwError"></div>
-    <button class="pw-submit" onclick="checkPassword()">Unlock →</button><br>
-    <button class="pw-cancel" onclick="closePwModal()">Cancel</button>
+
+    <!-- Logged IN state -->
+    <div id="adminLoggedIn" style="display:none;text-align:center">
+      <div class="admin-auth-logo">NOVA LENS</div>
+      <div style="font-size:3rem;margin:1rem 0">🔓</div>
+      <div class="admin-auth-title" style="font-size:1.5rem">ADMIN MODE</div>
+      <p class="admin-auth-sub" style="margin-bottom:1.5rem">
+        Logged in as <strong id="adminLoggedInEmail" style="color:var(--gold)"></strong>
+      </p>
+      <button class="admin-auth-submit" onclick="closeAdminModal();openAdmin()" style="margin-bottom:.8rem">
+        + Add New Model
+      </button>
+      <br>
+      <button onclick="doAdminLogout()" style="background:none;border:none;color:var(--muted);font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;margin-top:.5rem;transition:color .2s" onmouseover="this.style.color='#ff7070'" onmouseout="this.style.color='var(--muted)'">
+        Sign Out of Admin
+      </button>
+    </div>
+
   </div>
 </div>
 
-<!-- ══════════ ADMIN FAB ══════════ -->
+<!-- ══════════ ADMIN FAB (shown after admin login) ══════════ -->
 <button class="admin-fab" id="adminFab" onclick="toggleAdmin()" title="Add / Manage Models">
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#06080a" stroke-width="2.5" stroke-linecap="round">
     <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
@@ -3080,7 +3261,6 @@ const sb = createClient(
 // ═══════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════
-const ADMIN_PASSWORD = 'novalens2025'; // change this!
 let isAuthenticated = false;
 let adminOpen       = false;
 let currentStep     = 0;
@@ -3432,20 +3612,93 @@ function selectPlan(planKey,proceed=true) {
 }
 
 // ═══════════════════════════════════════════
-// ADMIN PASSWORD
+// ADMIN AUTH MODAL
 // ═══════════════════════════════════════════
-document.addEventListener('keydown',e=>{
-  if(e.shiftKey&&e.key==='A'&&!adminOpen){isAuthenticated?toggleAdmin():openPwModal();}
-  if(e.key==='Escape'){closePwModal();closeGate();closeAuthModal();closePricingModal();if(adminOpen)closeAdmin();if(document.getElementById('lightbox').classList.contains('open'))closeLightbox();}
-});
-function openPwModal(){document.getElementById('pwModal').classList.add('open');document.getElementById('pwInput').value='';document.getElementById('pwError').textContent='';document.body.style.overflow='hidden';setTimeout(()=>document.getElementById('pwInput').focus(),100);}
-function closePwModal(){document.getElementById('pwModal').classList.remove('open');document.body.style.overflow='';}
-function togglePwVisibility(){const inp=document.getElementById('pwInput');inp.type=inp.type==='password'?'text':'password';}
-function checkPassword(){
-  const val=document.getElementById('pwInput').value;const inp=document.getElementById('pwInput');const err=document.getElementById('pwError');
-  if(val===ADMIN_PASSWORD){isAuthenticated=true;closePwModal();document.getElementById('adminFab').classList.add('unlocked');document.body.classList.add('admin-mode-active');showToast('Admin mode unlocked ✦');}
-  else{err.textContent='Incorrect password.';inp.classList.add('error');inp.value='';setTimeout(()=>inp.classList.remove('error'),400);}
+// Admin emails — add anyone you want to give admin access to
+const ADMIN_EMAILS = [
+  'khonsum01@gmail.com', // replace with your real admin email
+];
+
+function openAdminModal() {
+  document.getElementById('adminAuthModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  // If already authenticated, show the logged-in panel
+  if (isAuthenticated) {
+    showAdminLoggedInPanel();
+  } else {
+    document.getElementById('adminAuthForm').style.display = '';
+    document.getElementById('adminLoggedIn').style.display = 'none';
+    document.getElementById('adminAuthError').textContent = '';
+    setTimeout(() => document.getElementById('adminEmail').focus(), 100);
+  }
 }
+
+function closeAdminModal() {
+  document.getElementById('adminAuthModal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+async function doAdminLogin() {
+  const email    = document.getElementById('adminEmail').value.trim();
+  const password = document.getElementById('adminPassword').value;
+  const errEl    = document.getElementById('adminAuthError');
+  const btn      = document.getElementById('adminAuthBtn');
+
+  if (!email || !password) { errEl.textContent = 'Please enter your email and password.'; return; }
+
+  btn.textContent = 'Signing in…'; btn.disabled = true;
+
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+
+  btn.textContent = 'Sign In as Admin →'; btn.disabled = false;
+
+  if (error) { errEl.textContent = error.message; return; }
+
+  // Check if this email is in the admin list
+  if (!ADMIN_EMAILS.includes(data.user.email)) {
+    await sb.auth.signOut();
+    errEl.textContent = 'This account does not have admin access.';
+    return;
+  }
+
+  isAuthenticated = true;
+  document.getElementById('adminFab').classList.add('unlocked');
+  document.body.classList.add('admin-mode-active');
+  document.getElementById('adminLoginBtn').classList.add('admin-active');
+  showAdminLoggedInPanel();
+  showToast('Admin mode unlocked ✦');
+}
+
+function showAdminLoggedInPanel() {
+  const email = document.getElementById('adminEmail').value ||
+                document.getElementById('adminLoggedInEmail').textContent ||
+                'Admin';
+  document.getElementById('adminLoggedInEmail').textContent = email;
+  document.getElementById('adminAuthForm').style.display  = 'none';
+  document.getElementById('adminLoggedIn').style.display  = '';
+}
+
+async function doAdminLogout() {
+  isAuthenticated = false;
+  document.getElementById('adminFab').classList.remove('unlocked');
+  document.body.classList.remove('admin-mode-active');
+  document.getElementById('adminLoginBtn').classList.remove('admin-active');
+  closeAdminModal();
+  closeAdmin();
+  showToast('Signed out of admin.');
+}
+
+// Keep escape key closing the admin modal too
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeAdminModal();
+    closeGate();
+    closeAuthModal();
+    closePricingModal();
+    if (adminOpen) closeAdmin();
+    if (document.getElementById('lightbox').classList.contains('open')) closeLightbox();
+  }
+});
 
 // ═══════════════════════════════════════════
 // ADMIN DRAWER
