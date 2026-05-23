@@ -2363,33 +2363,36 @@
       position: fixed;
       bottom: 1.5rem;
       right: 1.5rem;
-      z-index: 200;
-      display: flex;
+      z-index: 9999;
+      display: flex !important;
       align-items: center;
       gap: .5rem;
-      background: rgba(14,17,21,0.85);
-      border: 1px solid rgba(201,169,110,0.2);
+      background: #0e1115;
+      border: 1px solid rgba(201,169,110,0.4);
       border-radius: 20px;
-      color: var(--muted);
+      color: #5a6272;
       font-family: var(--font-body);
       font-size: .7rem;
       font-weight: 700;
       letter-spacing: .14em;
       text-transform: uppercase;
-      padding: .5rem 1rem;
+      padding: .55rem 1.1rem;
       cursor: pointer;
-      backdrop-filter: blur(8px);
       transition: all .25s;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      visibility: visible !important;
+      opacity: 1 !important;
     }
     .admin-login-btn:hover {
       border-color: var(--gold);
       color: var(--gold);
-      background: rgba(14,17,21,0.95);
+      background: #0e1115;
+      box-shadow: 0 4px 24px rgba(201,169,110,0.2);
     }
     .admin-login-btn.admin-active {
       border-color: var(--gold);
       color: var(--gold);
-      background: rgba(201,169,110,0.1);
+      background: rgba(201,169,110,0.08);
     }
 
     /* ── ADMIN AUTH MODAL ── */
@@ -3616,7 +3619,7 @@ function selectPlan(planKey,proceed=true) {
 // ═══════════════════════════════════════════
 // Admin emails — add anyone you want to give admin access to
 const ADMIN_EMAILS = [
-  'khonsum01@gmail.com', // replace with your real admin email
+  'admin@novalens.studio', // replace with your real admin email
 ];
 
 function openAdminModal() {
