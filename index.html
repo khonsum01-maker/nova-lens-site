@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;1,9..40,300&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -2357,6 +2358,15 @@
       .model-info-col { padding: 1.5rem; }
       footer { padding: 2rem 1.2rem; flex-direction: column; text-align: center; }
     }
+    .skeleton{background:linear-gradient(90deg,var(--gray-mid) 25%,rgba(255,255,255,.05) 50%,var(--gray-mid) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite}
+    @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+    .skeleton-card{border-radius:4px;overflow:hidden;border:1px solid var(--border)}
+    .skeleton-img{aspect-ratio:3/4;background:var(--gray-mid)}
+    .skeleton-body{padding:1.2rem 1.4rem}
+    .skeleton-line{height:14px;border-radius:2px;margin-bottom:10px}
+    .upload-progress{width:100%;height:4px;background:rgba(201,169,110,.15);border-radius:2px;margin-top:.5rem;overflow:hidden;display:none}
+    .upload-progress-bar{height:100%;background:var(--gold);border-radius:2px;width:0%;transition:width .3s}
+    .upload-progress.show{display:block}
   </style>
 </head>
 <body>
@@ -2438,7 +2448,12 @@
         Showing <strong id="searchCount">0</strong> result<span id="searchPlural">s</span> for "<span id="searchTerm"></span>"
       </div>
     </div>
-    <div class="models-grid" id="modelsGrid"></div>
+    <div class="models-grid" id="modelsGrid">
+      <div class="skeleton-card" id="sk1"><div class="skeleton-img skeleton"></div><div class="skeleton-body"><div class="skeleton-line skeleton" style="width:70%"></div><div class="skeleton-line skeleton" style="width:45%"></div></div></div>
+      <div class="skeleton-card" id="sk2"><div class="skeleton-img skeleton"></div><div class="skeleton-body"><div class="skeleton-line skeleton" style="width:60%"></div><div class="skeleton-line skeleton" style="width:40%"></div></div></div>
+      <div class="skeleton-card" id="sk3"><div class="skeleton-img skeleton"></div><div class="skeleton-body"><div class="skeleton-line skeleton" style="width:75%"></div><div class="skeleton-line skeleton" style="width:50%"></div></div></div>
+      <div class="skeleton-card" id="sk4"><div class="skeleton-img skeleton"></div><div class="skeleton-body"><div class="skeleton-line skeleton" style="width:55%"></div><div class="skeleton-line skeleton" style="width:35%"></div></div></div>
+    </div>
     <div class="no-results" id="noResults" style="display:none">
       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.3"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       <p>No models found for "<strong id="noResultsTerm"></strong>"</p>
@@ -2957,6 +2972,7 @@
           </div>
           <div class="upload-zone-text"><strong>Click to upload</strong> or drag & drop<br>JPG, PNG, WEBP · Max 10MB</div>
         </div>
+        <div class="upload-progress" id="coverProgress"><div class="upload-progress-bar" id="coverProgressBar"></div></div>
       </div>
 
       <div class="af-row">
@@ -3006,9 +3022,10 @@
     <!-- ── STEP 1: PHOTOS ── -->
     <div class="step-panel" id="stepPanel1">
       <p style="font-size:0.82rem;color:var(--muted);line-height:1.7;margin-bottom:1.5rem;">
-        Upload up to <strong style="color:var(--gold);">9 portfolio photos</strong>. Click any slot to choose an image, or drag and drop. Photos are shown in the model's gallery with the masonry layout.
+        Upload up to <strong style="color:var(--gold);">9 portfolio photos</strong>. Files upload directly to Supabase Storage and are saved permanently.
       </p>
       <div class="photo-upload-grid" id="photoUploadGrid"></div>
+      <div class="upload-progress" id="photosProgress"><div class="upload-progress-bar" id="photosProgressBar"></div></div>
       <p style="font-size:0.7rem;color:var(--muted);margin-top:0.5rem;">JPG, PNG, WEBP · Max 10MB each</p>
     </div>
 
@@ -3051,1117 +3068,494 @@
 </div>
 
 <script>
-  // ═══════════════════════════════════════════════
-  // PASSWORD — change this to your own password
-  // ═══════════════════════════════════════════════
-  const ADMIN_PASSWORD = 'novalens2025';
-  let isAuthenticated  = false;
+// ═══════════════════════════════════════════
+// SUPABASE INIT
+// ═══════════════════════════════════════════
+const { createClient } = supabase;
+const sb = createClient(
+  'https://skhwqqovwrvodsjzwrne.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNraHdxcW92d3J2b2Rzanp3cm5lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1MDgxMzAsImV4cCI6MjA5NTA4NDEzMH0.KVVcB03nPbQcGb5Jp2vvne4nPjpHKvFbUYWzDNwZk-w'
+);
 
-  // Press Shift + A anywhere on the page to open the password prompt
-  document.addEventListener('keydown', e => {
-    if (e.shiftKey && e.key === 'A' && !adminOpen) {
-      if (isAuthenticated) {
-        toggleAdmin();
-      } else {
-        openPwModal();
-      }
-    }
-    if (e.key === 'Escape') {
-      closePwModal();
-      closeGate();
-      closeAuthModal();
-      closePricingModal();
-      if (adminOpen) closeAdmin();
-      if (document.getElementById('lightbox').classList.contains('open')) closeLightbox();
-    }
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+const ADMIN_PASSWORD = 'novalens2025'; // change this!
+let isAuthenticated = false;
+let adminOpen       = false;
+let currentStep     = 0;
+let memberSession   = null;
+let pendingModelId  = null;
+let selectedPlan    = 'annual';
+let pendingSignup   = null;
+let models          = [];
+let lbImages = [], lbIndex = 0;
+let videoEntryCount = 0;
+let coverFile       = null;
+let photoFiles      = Array(9).fill(null);
+let statRows        = [];
+
+const PLAN_LABELS = {
+  monthly: { name:'Monthly',            price:'$19 / month' },
+  annual:  { name:'Annual',             price:'$14 / month · $168/year' },
+  agency:  { name:'Agency (5 seats)',   price:'$49 / month' },
+};
+const STRIPE_LINKS = {
+  monthly: 'https://buy.stripe.com/YOUR_MONTHLY_LINK',
+  annual:  'https://buy.stripe.com/YOUR_ANNUAL_LINK',
+  agency:  'https://buy.stripe.com/YOUR_AGENCY_LINK',
+};
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) { memberSession = session.user; updateNavForMember(); }
+
+  sb.auth.onAuthStateChange((_e, session) => {
+    memberSession = session?.user || null;
+    if (memberSession) updateNavForMember(); else resetNavToLoggedOut();
   });
 
-  function openPwModal() {
-    document.getElementById('pwModal').classList.add('open');
-    document.getElementById('pwInput').value = '';
-    document.getElementById('pwError').textContent = '';
-    document.body.style.overflow = 'hidden';
-    setTimeout(() => document.getElementById('pwInput').focus(), 100);
+  await loadModels();
+
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('payment') === 'success') {
+    window.history.replaceState({}, '', window.location.pathname);
+    setTimeout(handleStripeReturn, 500);
   }
+});
 
-  function closePwModal() {
-    document.getElementById('pwModal').classList.remove('open');
-    document.body.style.overflow = '';
-  }
-
-  function togglePwVisibility() {
-    const inp = document.getElementById('pwInput');
-    inp.type = inp.type === 'password' ? 'text' : 'password';
-  }
-
-  function checkPassword() {
-    const val = document.getElementById('pwInput').value;
-    const inp = document.getElementById('pwInput');
-    const err = document.getElementById('pwError');
-
-    if (val === ADMIN_PASSWORD) {
-      isAuthenticated = true;
-      closePwModal();
-      document.getElementById('adminFab').classList.add('unlocked');
-      showToast('Admin mode unlocked ✦');
-    } else {
-      err.textContent = 'Incorrect password. Try again.';
-      inp.classList.add('error');
-      inp.value = '';
-      setTimeout(() => inp.classList.remove('error'), 400);
-      inp.focus();
-    }
-  }
-
-  // ═══════════════════════════════════════════════
-  // STATE
-  // ═══════════════════════════════════════════════
-  let nextId       = 9;
-  let currentStep  = 0;
-  let adminOpen    = false;
-  let pendingModelId = null; // model the user was trying to view before gate
-
-  // Member session (replaced by Supabase later)
-  let memberSession = null; // { name, email } when logged in
-  // Simple in-memory "database" of registered members (demo only)
-  const memberAccounts = [];
-
-  // Temp state for the form being built
-  let draft = { coverDataUrl: '', photos: Array(9).fill(''), videos: [] };
-
-  // ═══════════════════════════════════════════════
-  // MODEL DATA
-  // To add photos: fill in the `photos` array with image paths, e.g. "images/isabelle-1.jpg"
-  // To add videos: fill `videos` with objects:
-  //   { type: "file",    src: "videos/reel.mp4",           label: "2024 Reel" }
-  //   { type: "youtube", src: "https://www.youtube.com/embed/VIDEO_ID", label: "Campaign" }
-  //   { type: "vimeo",   src: "https://player.vimeo.com/video/VIDEO_ID", label: "Editorial" }
-  // ─────────────────────────────────────────────
-  const models = [
-    {
-      id: 1,
-      name: "Isabelle Chen",
-      category: "Editorial",
-      nationality: "New York, NY",
-      img: "",
-      bio: "Isabelle's striking bone structure and natural expressiveness make her a standout editorial talent. She's appeared in agency test shoots for IMG and Ford, and is currently building her book for international submissions.",
-      stats: { Shoots: 24, Agencies: 3, Editorials: 11 },
-      photos: [
-        // Add up to 9 photo paths here, e.g.: "images/isabelle-1.jpg"
-        "","","","","","","","",""
-      ],
-      videos: [
-        // { type:"youtube", src:"https://www.youtube.com/embed/YOUR_ID", label:"2024 Reel" },
-        // { type:"file",    src:"videos/isabelle-bts.mp4",               label:"BTS Footage" },
-      ]
-    },
-    {
-      id: 2,
-      name: "Marcus Osei",
-      category: "Commercial",
-      nationality: "Atlanta, GA",
-      img: "",
-      bio: "Marcus brings a grounded, versatile energy that brands love. His commercial range — from sportswear to luxury — is broad, and his comp card stats speak for themselves. Represented by Next Model Management.",
-      stats: { Shoots: 31, Campaigns: 8, Agencies: 2 },
-      photos: ["","","","","","","","",""],
-      videos: []
-    },
-    {
-      id: 3,
-      name: "Sofía Vidal",
-      category: "Fashion",
-      nationality: "Miami, FL",
-      img: "",
-      bio: "Sofía is a rising name in fashion and ready-to-wear. With a background in dance, her movement and posing vocabulary is exceptional. She's been featured in lookbooks for three independent designers this season.",
-      stats: { Shoots: 19, Lookbooks: 7, Shows: 5 },
-      photos: ["","","","","","","","",""],
-      videos: []
-    },
-    {
-      id: 4,
-      name: "Kai Andersson",
-      category: "Beauty",
-      nationality: "Los Angeles, CA",
-      img: "",
-      bio: "Kai's androgynous aesthetic and expressive range make them a sought-after beauty model. They work across skincare, fragrance, and editorial beauty, and hold a strong relationship with several cosmetic brands.",
-      stats: { Shoots: 28, Brands: 6, Covers: 4 },
-      photos: ["","","","","","","","",""],
-      videos: []
-    },
-    {
-      id: 5,
-      name: "Amara Diallo",
-      category: "Editorial",
-      nationality: "Brooklyn, NY",
-      img: "",
-      bio: "Amara is a fine art and editorial model who brings intellectual depth to every frame. Her work leans dark, cinematic, and conceptual — a perfect match for photographers pushing creative boundaries.",
-      stats: { Shoots: 22, Editorials: 14, Awards: 3 },
-      photos: ["","","","","","","","",""],
-      videos: []
-    },
-    {
-      id: 6,
-      name: "River Nakamura",
-      category: "Commercial",
-      nationality: "Chicago, IL",
-      img: "",
-      bio: "River's approachable charisma and camera-readiness make every brief look effortless. From lifestyle campaigns to catalog work, they deliver clean, on-brand imagery with minimal direction.",
-      stats: { Shoots: 36, Campaigns: 12, Agencies: 4 },
-      photos: ["","","","","","","","",""],
-      videos: []
-    },
-    {
-      id: 7,
-      name: "Léa Fontaine",
-      category: "Runway",
-      nationality: "Montreal, CA",
-      img: "",
-      bio: "Léa has the height, walk, and precision required for high-fashion runway work. She's walked for three emerging designers at New York Fashion Week and is actively seeking representation for the Paris season.",
-      stats: { Shoots: 17, Shows: 9, Agencies: 1 },
-      photos: ["","","","","","","","",""],
-      videos: []
-    },
-    {
-      id: 8,
-      name: "Dante Williams",
-      category: "Fitness",
-      nationality: "Houston, TX",
-      img: "",
-      bio: "Dante combines elite athletic physique with natural charisma, making him a top performer in fitness, activewear, and health brand photography. His sessions are high energy and highly productive.",
-      stats: { Shoots: 29, Brands: 9, Features: 6 },
-      photos: ["","","","","","","","",""],
-      videos: []
-    },
-  ];
-
-  // ── BUILD MODEL CARDS ──
-  function buildModelCard(m) {
-    const gridEl = document.getElementById('modelsGrid');
-    const statKeys = Object.keys(m.stats);
-    const imgHTML = m.img
-      ? `<img src="${m.img}" alt="${m.name}" style="width:100%;height:100%;object-fit:cover;filter:grayscale(10%);transition:filter .4s,transform .4s">`
-      : `<div class="card-img-gradient">
-           <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
-             <circle cx="40" cy="28" r="18" stroke="#c9a96e" stroke-width="2" opacity="0.4"/>
-             <path d="M6 76c0-18.8 15.2-34 34-34s34 15.2 34 34" stroke="#c9a96e" stroke-width="2" stroke-linecap="round" opacity="0.4"/>
-           </svg></div>`;
-
-    const wrapper = document.createElement('div');
-    wrapper.className = 'model-card-wrapper';
-    wrapper.dataset.modelId = m.id;
-    wrapper.dataset.modelName = m.name.toLowerCase();
-    wrapper.innerHTML = `
-      <button class="card-delete-btn" onclick="deleteModel(${m.id}, this)" title="Delete model">✕</button>
-      <a class="model-card" href="#" onclick="handleCardClick(${m.id}); return false;">
-        <div class="card-img">
-          ${imgHTML}
-          <div class="card-category-badge">${m.category}</div>
-          <div class="card-locked-overlay">
-            <div class="lock-badge">
-              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-              Members Only
-            </div>
-          </div>
-        </div>
-        <div class="card-body">
-          <div class="card-name">${m.name}</div>
-          <div class="card-meta">${m.nationality}</div>
-          <div class="card-mini-stats">
-            ${statKeys.map(k => `<div class="mini-stat"><div class="val">${m.stats[k]}</div><div class="key">${k}</div></div>`).join('')}
-          </div>
-          <div class="card-cta" id="cardCta${m.id}">View Full Profile →</div>
-        </div>
-      </a>`;
-    gridEl.appendChild(wrapper);
-  }
-
-  // Init: build all cards
+// ═══════════════════════════════════════════
+// LOAD MODELS
+// ═══════════════════════════════════════════
+async function loadModels() {
   const grid = document.getElementById('modelsGrid');
+  const { data, error } = await sb
+    .from('models')
+    .select('*, model_photos(url,position), model_videos(type,src,label,position)')
+    .order('created_at', { ascending: false });
+
+  ['sk1','sk2','sk3','sk4'].forEach(id => { const el=document.getElementById(id); if(el) el.remove(); });
+
+  if (error) { console.error(error); grid.innerHTML='<p style="color:var(--muted);padding:2rem">Could not load models. Please refresh.</p>'; return; }
+
+  models = data || [];
   models.forEach(m => buildModelCard(m));
-
-  // ── HANDLE CARD CLICK (gate check) ──
-  function handleCardClick(id) {
-    if (memberSession) {
-      showModel(id);
-    } else {
-      pendingModelId = id;
-      const m = models.find(x => x.id === id);
-      openGate(m ? m.name : '');
-    }
-  }
-
-  // ── LIGHTBOX STATE ──
-  let lbImages = [];
-  let lbIndex  = 0;
-
-  function openLightbox(images, index) {
-    lbImages = images;
-    lbIndex  = index;
-    document.getElementById('lightboxImg').src = lbImages[lbIndex];
-    document.getElementById('lightbox').classList.add('open');
-    document.body.style.overflow = 'hidden';
-  }
-
-  function closeLightbox(e) {
-    if (e && e.target !== e.currentTarget) return;
-    document.getElementById('lightbox').classList.remove('open');
-    document.getElementById('lightboxImg').src = '';
-    document.body.style.overflow = '';
-  }
-
-  function lightboxNav(dir) {
-    lbIndex = (lbIndex + dir + lbImages.length) % lbImages.length;
-    document.getElementById('lightboxImg').src = lbImages[lbIndex];
-  }
-
-  document.addEventListener('keydown', e => {
-    if (!document.getElementById('lightbox').classList.contains('open')) return;
-    if (e.key === 'Escape')      closeLightbox();
-    if (e.key === 'ArrowRight')  lightboxNav(1);
-    if (e.key === 'ArrowLeft')   lightboxNav(-1);
-  });
-
-  // ── BUILD PHOTO GRID ──
-  function buildPhotoGrid(model) {
-    const container = document.getElementById('portfolioPhotoGrid');
-    container.innerHTML = '';
-    const photos = model.photos || [];
-    const filledPhotos = photos.filter(p => p && p.trim() !== '');
-
-    // Always render 9 slots
-    for (let i = 0; i < 9; i++) {
-      const src = photos[i] || '';
-      const item = document.createElement('div');
-      item.className = 'pgrid-item';
-
-      if (src) {
-        item.innerHTML = `
-          <img src="${src}" alt="Portfolio photo ${i+1}">
-          <div class="pgrid-overlay">
-            <div class="pgrid-overlay-icon">⊕</div>
-          </div>`;
-        item.addEventListener('click', () => {
-          openLightbox(filledPhotos, filledPhotos.indexOf(src));
-        });
-      } else {
-        item.innerHTML = `
-          <div class="pgrid-slot">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
-              <rect x="3" y="3" width="18" height="18" rx="2"/>
-              <circle cx="8.5" cy="8.5" r="1.5"/>
-              <polyline points="21 15 16 10 5 21"/>
-            </svg>
-            <span>Add Photo</span>
-          </div>`;
-      }
-      container.appendChild(item);
-    }
-  }
-
-  // ── BUILD VIDEO GRID ──
-  function buildVideoGrid(model) {
-    const container = document.getElementById('portfolioVideoGrid');
-    container.innerHTML = '';
-    const videos = model.videos || [];
-
-    // Always show at least 3 video slots
-    const totalSlots = Math.max(videos.length, 3);
-
-    for (let i = 0; i < totalSlots; i++) {
-      const v = videos[i];
-      const slot = document.createElement('div');
-      slot.className = 'video-slot';
-
-      if (v) {
-        if (v.type === 'file') {
-          slot.innerHTML = `
-            <video controls preload="metadata">
-              <source src="${v.src}" type="video/mp4">
-            </video>
-            ${v.label ? `<div class="video-slot-label">${v.label}</div>` : ''}`;
-        } else {
-          // youtube or vimeo embed
-          slot.innerHTML = `
-            <iframe src="${v.src}" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>
-            ${v.label ? `<div class="video-slot-label">${v.label}</div>` : ''}`;
-        }
-      } else {
-        const labels = ['Feature Reel', 'BTS Footage', 'Campaign Video'];
-        slot.innerHTML = `
-          <div class="video-slot-empty">
-            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
-              <polygon points="23 7 16 12 23 17 23 7"/>
-              <rect x="1" y="5" width="15" height="14" rx="2"/>
-            </svg>
-            <span>${labels[i] || 'Add Video'}</span>
-          </div>`;
-      }
-      container.appendChild(slot);
-    }
-  }
-
-  // ── TAB SWITCHING ──
-  function switchTab(tab) {
-    document.querySelectorAll('.ptab').forEach(t => t.classList.remove('active'));
-    event.target.classList.add('active');
-
-    const photoGrid = document.getElementById('portfolioPhotoGrid');
-    const videoGrid = document.getElementById('portfolioVideoGrid');
-
-    if (tab === 'photos') {
-      photoGrid.classList.remove('hidden');
-      videoGrid.classList.add('hidden');
-    } else {
-      photoGrid.classList.add('hidden');
-      videoGrid.classList.remove('hidden');
-    }
-  }
-
-  // ── SHOW MODEL PROFILE ──
-  function showModel(id) {
-    const m = models.find(x => x.id === id);
-    if (!m) return;
-
-    document.getElementById('modelNameBg').textContent = m.name.split(' ')[0].toUpperCase();
-    document.getElementById('modelTag').textContent = `${m.category} · ${m.nationality}`;
-    document.getElementById('modelName').textContent = m.name;
-    document.getElementById('modelCatBadge').textContent = m.category;
-    document.getElementById('modelBio').textContent = m.bio;
-
-    // Hero image
-    const imgCol     = document.getElementById('modelImgCol');
-    const placeholder = document.getElementById('modelImgPlaceholder');
-    const existingImg = imgCol.querySelector('img.model-hero-img');
-    if (m.img) {
-      placeholder.style.display = 'none';
-      if (existingImg) {
-        existingImg.src = m.img; existingImg.alt = m.name; existingImg.style.display = '';
-      } else {
-        const img = document.createElement('img');
-        img.className = 'model-hero-img';
-        img.src = m.img; img.alt = m.name;
-        imgCol.insertBefore(img, imgCol.firstChild);
-      }
-    } else {
-      if (existingImg) existingImg.style.display = 'none';
-      placeholder.style.display = '';
-    }
-
-    // Stats
-    document.getElementById('modelStatsGrid').innerHTML =
-      Object.entries(m.stats).map(([k,v]) =>
-        `<div class="mstat"><div class="num">${v}</div><div class="key">${k}</div></div>`
-      ).join('');
-
-    // Portfolio
-    buildPhotoGrid(m);
-    buildVideoGrid(m);
-
-    // Reset tabs to Photos
-    document.querySelectorAll('.ptab').forEach((t,i) => t.classList.toggle('active', i===0));
-    document.getElementById('portfolioPhotoGrid').classList.remove('hidden');
-    document.getElementById('portfolioVideoGrid').classList.add('hidden');
-
-    // Reset form
-    document.getElementById('modelFormFields').style.display = '';
-    document.getElementById('modelFormSuccess').style.display = 'none';
-
-    // Switch pages
-    document.getElementById('main-page').style.display = 'none';
-    document.getElementById('model-page').style.display = 'block';
-    window.scrollTo(0, 0);
-  }
-
-  function showHome() {
-    document.getElementById('model-page').style.display = 'none';
-    document.getElementById('main-page').style.display = 'block';
-    window.scrollTo(0, 0);
-  }
-
-  function submitForm(fieldsId, successId) {
-    document.getElementById(fieldsId).style.display = 'none';
-    document.getElementById(successId).style.display = 'block';
-  }
-
-  function toggleMenu() {
-    document.getElementById('hamburger').classList.toggle('open');
-    document.getElementById('mobileMenu').classList.toggle('open');
-  }
-
-  // ═══════════════════════════════════════════════
-  // SEARCH
-  // ═══════════════════════════════════════════════
-  function filterModels(query) {
-    const q = query.trim().toLowerCase();
-    const clearBtn  = document.getElementById('searchClear');
-    const metaEl    = document.getElementById('searchMeta');
-    const countEl   = document.getElementById('searchCount');
-    const pluralEl  = document.getElementById('searchPlural');
-    const termEl    = document.getElementById('searchTerm');
-    const noResults = document.getElementById('noResults');
-    const noTerm    = document.getElementById('noResultsTerm');
-    const wrappers  = document.querySelectorAll('.model-card-wrapper');
-
-    clearBtn.style.display = q ? '' : 'none';
-
-    let visible = 0;
-    wrappers.forEach(w => {
-      const name = w.dataset.modelName || '';
-      const match = !q || name.includes(q);
-      w.style.display = match ? '' : 'none';
-      if (match) visible++;
-    });
-
-    if (q) {
-      metaEl.style.display = '';
-      countEl.textContent = visible;
-      pluralEl.textContent = visible === 1 ? '' : 's';
-      termEl.textContent = query.trim();
-      noTerm.textContent = query.trim();
-      noResults.style.display = visible === 0 ? 'flex' : 'none';
-    } else {
-      metaEl.style.display = 'none';
-      noResults.style.display = 'none';
-    }
-  }
-
-  function clearSearch() {
-    const inp = document.getElementById('searchInput');
-    inp.value = '';
-    filterModels('');
-    inp.focus();
-  }
-
-  // ═══════════════════════════════════════════════
-  // MEMBER GATE
-  // ═══════════════════════════════════════════════
-  function openGate(modelName) {
-    const nameEl = document.getElementById('gateModelName');
-    nameEl.textContent = modelName ? `Sign in to view ${modelName}'s full profile.` : '';
-    document.getElementById('gateModal').classList.add('open');
-    document.body.style.overflow = 'hidden';
-  }
-
-  function closeGate() {
-    document.getElementById('gateModal').classList.remove('open');
-    document.body.style.overflow = '';
-  }
-
-  // ═══════════════════════════════════════════════
-  // MEMBER AUTH
-  // ═══════════════════════════════════════════════
-  function openMemberModal(tab) {
-    document.getElementById('authModal').classList.add('open');
-    document.body.style.overflow = 'hidden';
-    switchAuthTab(tab || 'login');
-    // Reset checkout to step 1
-    showCheckoutStep('account');
-    // Clear errors
-    document.getElementById('loginError').textContent = '';
-    document.getElementById('signupError').textContent = '';
-  }
-
-  function closeAuthModal() {
-    document.getElementById('authModal').classList.remove('open');
-    document.body.style.overflow = '';
-    pendingModelId = null;
-  }
-
-  function switchAuthTab(tab) {
-    ['login','signup'].forEach(t => {
-      document.getElementById(`authTab${t.charAt(0).toUpperCase()+t.slice(1)}`).classList.toggle('active', t === tab);
-      document.getElementById(`authPanel${t.charAt(0).toUpperCase()+t.slice(1)}`).classList.toggle('active', t === tab);
-    });
-  }
-
-  function doLogin() {
-    const email = document.getElementById('loginEmail').value.trim();
-    const pass  = document.getElementById('loginPassword').value;
-    const errEl = document.getElementById('loginError');
-
-    if (!email || !pass) { errEl.textContent = 'Please fill in all fields.'; return; }
-
-    // Check against in-memory accounts (demo) — Supabase will replace this
-    const account = memberAccounts.find(a => a.email.toLowerCase() === email.toLowerCase() && a.password === pass);
-    if (!account) {
-      errEl.textContent = 'Incorrect email or password.';
-      document.getElementById('loginEmail').classList.add('error');
-      setTimeout(() => document.getElementById('loginEmail').classList.remove('error'), 1500);
-      return;
-    }
-
-    loginSuccess(account.name, account.email);
-  }
-
-  // ═══════════════════════════════════════════════
-  // PRICING & PAYMENT
-  // ═══════════════════════════════════════════════
-
-  // ── IMPORTANT: Replace these with your real Stripe Payment Links ──
-  // Create them at: https://dashboard.stripe.com/payment-links
-  const STRIPE_LINKS = {
-    monthly: 'https://buy.stripe.com/YOUR_MONTHLY_LINK',   // replace
-    annual:  'https://buy.stripe.com/YOUR_ANNUAL_LINK',    // replace
-    agency:  'https://buy.stripe.com/YOUR_AGENCY_LINK',    // replace
-  };
-
-  const PLAN_LABELS = {
-    monthly: { name: 'Monthly',        price: '$19 / month' },
-    annual:  { name: 'Annual',         price: '$14 / month · $168/year' },
-    agency:  { name: 'Agency (5 seats)', price: '$49 / month' },
-  };
-
-  let selectedPlan   = 'annual'; // default
-  let pendingSignup  = null;     // { name, email, password } saved before Stripe redirect
-
-  function openPricingModal() {
-    document.getElementById('pricingModal').classList.add('open');
-    document.body.style.overflow = 'hidden';
-    selectPlan('annual', false); // pre-select popular plan, no auto-proceed
-  }
-
-  function closePricingModal() {
-    document.getElementById('pricingModal').classList.remove('open');
-    document.body.style.overflow = '';
-  }
-
-  function selectPlan(planKey, proceed = true) {
-    selectedPlan = planKey;
-    // Update card highlight
-    ['monthly','annual','agency'].forEach(p => {
-      document.getElementById(`planCard${p.charAt(0).toUpperCase()+p.slice(1)}`).classList.toggle('selected', p === planKey);
-    });
-    if (proceed) {
-      closePricingModal();
-      openMemberModal('signup');
-    }
-  }
-
-  function updateCheckoutSummary() {
-    const plan = PLAN_LABELS[selectedPlan] || PLAN_LABELS.monthly;
-    ['', '2'].forEach(suffix => {
-      const nameEl  = document.getElementById(`checkoutPlanName${suffix}`);
-      const priceEl = document.getElementById(`checkoutPlanPrice${suffix}`);
-      if (nameEl)  nameEl.textContent  = plan.name;
-      if (priceEl) priceEl.textContent = plan.price;
-    });
-  }
-
-  function showCheckoutStep(step) {
-    document.querySelectorAll('.checkout-step').forEach(el => el.classList.remove('active'));
-    document.getElementById(`checkoutStep${step.charAt(0).toUpperCase()+step.slice(1)}`).classList.add('active');
-    if (step === 'payment') updateCheckoutSummary();
-  }
-
-  function proceedToCheckout() {
-    const fname = document.getElementById('signupFname').value.trim();
-    const lname = document.getElementById('signupLname').value.trim();
-    const email = document.getElementById('signupEmail').value.trim();
-    const pass  = document.getElementById('signupPassword').value;
-    const errEl = document.getElementById('signupError');
-
-    if (!fname || !lname || !email || !pass) { errEl.textContent = 'Please fill in all fields.'; return; }
-    if (pass.length < 8) { errEl.textContent = 'Password must be at least 8 characters.'; return; }
-    if (memberAccounts.find(a => a.email.toLowerCase() === email.toLowerCase())) {
-      errEl.textContent = 'An account with that email already exists.'; return;
-    }
-
-    // Save signup data — account will be created after payment confirms
-    pendingSignup = { name: `${fname} ${lname}`, email, password: pass };
-
-    // Save to sessionStorage so we can restore after Stripe redirect
-    sessionStorage.setItem('nl_pending_signup', JSON.stringify({ ...pendingSignup, plan: selectedPlan }));
-    sessionStorage.setItem('nl_pending_model', pendingModelId || '');
-
-    showCheckoutStep('payment');
-    updateCheckoutSummary();
-  }
-
-  function goToStripe() {
-    const link = STRIPE_LINKS[selectedPlan];
-
-    // If real Stripe link is configured, redirect there
-    if (link && !link.includes('YOUR_')) {
-      // Append success_url param if your Stripe link supports it (use Payment Links settings)
-      window.location.href = link;
-      return;
-    }
-
-    // ── DEMO MODE: Stripe not yet configured ──
-    // Simulate a successful payment for testing
-    simulatePaymentSuccess();
-  }
-
-  function simulatePaymentSuccess() {
-    // In production this is triggered by Stripe redirecting back to ?payment=success
-    if (!pendingSignup) {
-      // Try restoring from session (for after real redirect)
-      const saved = sessionStorage.getItem('nl_pending_signup');
-      if (saved) {
-        const data = JSON.parse(saved);
-        pendingSignup = { name: data.name, email: data.email, password: data.password };
-        selectedPlan  = data.plan || 'monthly';
-        const savedModel = sessionStorage.getItem('nl_pending_model');
-        if (savedModel) pendingModelId = parseInt(savedModel) || null;
-      }
-    }
-
-    if (!pendingSignup) return;
-
-    // Create the account
-    memberAccounts.push({ ...pendingSignup });
-    closeAuthModal();
-    closePricingModal();
-
-    // Show success screen
-    document.getElementById('successName').textContent = pendingSignup.name.split(' ')[0];
-    document.getElementById('successModal').classList.add('open');
-    document.body.style.overflow = 'hidden';
-
-    // Store session for return
-    sessionStorage.removeItem('nl_pending_signup');
-    sessionStorage.removeItem('nl_pending_model');
-  }
-
-  function activateMemberAndClose() {
-    if (!pendingSignup) return;
-    loginSuccess(pendingSignup.name, pendingSignup.email);
-    pendingSignup = null;
-    document.getElementById('successModal').classList.remove('open');
-    document.body.style.overflow = '';
-  }
-
-  // Check on page load if returning from Stripe with ?payment=success
-  (function checkStripeReturn() {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('payment') === 'success') {
-      // Clean URL
-      window.history.replaceState({}, '', window.location.pathname);
-      setTimeout(simulatePaymentSuccess, 500);
-    }
-  })();
-
-  function doSignup() {
-    // Legacy — now routes through proceedToCheckout
-    proceedToCheckout();
-  }
-
-  function loginSuccess(name, email) {
-    memberSession = { name, email };
-    closeAuthModal();
-    closeGate();
-    updateNavForMember();
-    showToast(`Welcome, ${name.split(' ')[0]}! ✦`);
-    // If they were trying to view a profile, open it now
-    if (pendingModelId) {
-      const id = pendingModelId;
-      pendingModelId = null;
-      setTimeout(() => showModel(id), 300);
-    }
-  }
-
-  function logoutMember() {
-    memberSession = null;
-    pendingModelId = null;
-    // Update nav back to logged-out state
-    document.getElementById('navLoginBtn').style.display = '';
-    document.getElementById('navUser').style.display = 'none';
-    document.getElementById('mobileAuthLink').textContent = 'Members Login';
-    document.getElementById('mobileAuthLink').onclick = () => { closeMenu(); openMemberModal('login'); };
-    showToast('You have been signed out.');
-    // If on a model profile, go back home
-    if (document.getElementById('model-page').style.display !== 'none') showHome();
-  }
-
-  function updateNavForMember() {
-    const firstName = memberSession.name.split(' ')[0];
-    const initial   = memberSession.name.charAt(0).toUpperCase();
-    document.getElementById('navLoginBtn').style.display = 'none';
-    document.getElementById('navAvatar').textContent    = initial;
-    document.getElementById('navUserName').textContent  = firstName;
-    document.getElementById('navUser').style.display    = 'flex';
-    // Mobile menu
-    document.getElementById('mobileAuthLink').textContent = `Hi, ${firstName} — Sign Out`;
-    document.getElementById('mobileAuthLink').onclick = () => { closeMenu(); logoutMember(); };
-  }
-
-  function closeMenu() {
-    document.getElementById('hamburger').classList.remove('open');
-    document.getElementById('mobileMenu').classList.remove('open');
-  }
-
-  // ═══════════════════════════════════════════════
-  // ADMIN PANEL
-  // ═══════════════════════════════════════════════
-
-  function toggleAdmin() {
-    adminOpen ? closeAdmin() : openAdmin();
-  }
-
-  function openAdmin() {
-    adminOpen = true;
-    resetDraft();
-    document.getElementById('adminFab').classList.add('open');
-    document.getElementById('adminOverlay').classList.add('open');
-    document.getElementById('adminDrawer').classList.add('open');
-    document.body.style.overflow = 'hidden';
-    goStep(0);
-    buildPhotoUploadGrid();
-    renderStatBuilder();
-  }
-
-  function closeAdmin() {
-    adminOpen = false;
-    document.getElementById('adminFab').classList.remove('open');
-    document.getElementById('adminOverlay').classList.remove('open');
-    document.getElementById('adminDrawer').classList.remove('open');
-    document.body.style.overflow = '';
-  }
-
-  function resetDraft() {
-    draft = { coverDataUrl: '', photos: Array(9).fill(''), videos: [] };
-    // Clear form fields
-    ['af-fname','af-lname','af-location','af-bio'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.value = '';
-    });
-    const cat = document.getElementById('af-category');
-    if (cat) cat.value = '';
-    // Reset cover
-    document.getElementById('coverPreview').classList.remove('visible');
-    document.getElementById('coverChangeBtn').classList.remove('visible');
-    document.getElementById('coverZone').style.display = '';
-    document.getElementById('coverInput').value = '';
-    // Clear videos
-    document.getElementById('videoEntries').innerHTML = '';
-  }
-
-  // ── STEP NAVIGATION ──
-  function goStep(n) {
-    currentStep = n;
-    document.querySelectorAll('.step-panel').forEach((p, i) => p.classList.toggle('active', i === n));
-    document.querySelectorAll('.drawer-step-btn').forEach((b, i) => b.classList.toggle('active', i === n));
-
-    const backBtn = document.getElementById('drawerBackBtn');
-    const nextBtn = document.getElementById('drawerNextBtn');
-
-    backBtn.style.display = n > 0 ? '' : 'none';
-    if (n < 2) {
-      nextBtn.textContent = n === 0 ? 'Next: Photos →' : 'Next: Videos →';
-    } else {
-      nextBtn.textContent = '✦ Save Model';
-    }
-  }
-
-  function drawerNav(dir) {
-    if (currentStep === 2 && dir === 1) {
-      saveModel();
-      return;
-    }
-    if (currentStep + dir < 0 || currentStep + dir > 2) return;
-    goStep(currentStep + dir);
-  }
-
-  // ── COVER PHOTO ──
-  function handleCoverUpload(input) {
-    const file = input.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = e => {
-      draft.coverDataUrl = e.target.result;
-      const preview = document.getElementById('coverPreview');
-      preview.src = e.target.result;
-      preview.classList.add('visible');
-      document.getElementById('coverChangeBtn').classList.add('visible');
-      document.getElementById('coverZone').style.display = 'none';
-    };
-    reader.readAsDataURL(file);
-  }
-
-  // Drag-and-drop on cover zone
-  const coverZone = document.getElementById('coverZone');
-  if (coverZone) {
-    coverZone.addEventListener('dragover', e => { e.preventDefault(); coverZone.classList.add('drag-over'); });
-    coverZone.addEventListener('dragleave', () => coverZone.classList.remove('drag-over'));
-    coverZone.addEventListener('drop', e => {
-      e.preventDefault();
-      coverZone.classList.remove('drag-over');
-      const file = e.dataTransfer.files[0];
-      if (file && file.type.startsWith('image/')) {
-        const dt = new DataTransfer();
-        dt.items.add(file);
-        document.getElementById('coverInput').files = dt.files;
-        handleCoverUpload(document.getElementById('coverInput'));
-      }
-    });
-  }
-
-  // ── STAT BUILDER ──
-  let statRows = [{ label: 'Shoots', value: '' }];
-
-  function renderStatBuilder() {
-    statRows = [{ label: 'Shoots', value: '' }];
-    const builder = document.getElementById('statBuilder');
-    builder.innerHTML = '';
-    statRows.forEach((_, i) => addStatRowElement(i));
-  }
-
-  function addStatRow() {
-    statRows.push({ label: '', value: '' });
-    const builder = document.getElementById('statBuilder');
-    const idx = statRows.length - 1;
-    addStatRowElement(idx);
-  }
-
-  function addStatRowElement(idx) {
-    const builder = document.getElementById('statBuilder');
-    const row = document.createElement('div');
-    row.className = 'stat-row-input';
-    row.id = `statRow${idx}`;
-    row.innerHTML = `
-      <input class="af-input" placeholder="Label (e.g. Shoots)" id="stat-label-${idx}" value="${statRows[idx].label}">
-      <input class="af-input" placeholder="Value (e.g. 24)" id="stat-value-${idx}" type="number" min="0" value="${statRows[idx].value}">
-      <button class="stat-remove" onclick="removeStatRow(${idx})" title="Remove">✕</button>`;
-    builder.appendChild(row);
-  }
-
-  function removeStatRow(idx) {
-    const el = document.getElementById(`statRow${idx}`);
-    if (el) el.remove();
-    statRows[idx] = null;
-  }
-
-  function getStatsFromForm() {
-    const stats = {};
-    statRows.forEach((_, idx) => {
-      const labelEl = document.getElementById(`stat-label-${idx}`);
-      const valueEl = document.getElementById(`stat-value-${idx}`);
-      if (labelEl && valueEl && labelEl.value.trim()) {
-        stats[labelEl.value.trim()] = parseInt(valueEl.value) || 0;
-      }
-    });
-    return stats;
-  }
-
-  // ── PHOTO UPLOAD GRID ──
-  function buildPhotoUploadGrid() {
-    const grid = document.getElementById('photoUploadGrid');
-    grid.innerHTML = '';
-    draft.photos = Array(9).fill('');
-    for (let i = 0; i < 9; i++) {
-      const slot = document.createElement('div');
-      slot.className = 'pug-slot';
-      slot.id = `pugSlot${i}`;
-      slot.innerHTML = `
-        <input type="file" accept="image/*" onchange="handlePhotoSlot(${i}, this)">
-        <img id="pugImg${i}" alt="">
-        <div class="pug-placeholder">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-          </svg>
-          <span>Add</span>
+}
+
+// ═══════════════════════════════════════════
+// MODEL CARDS
+// ═══════════════════════════════════════════
+function buildModelCard(m) {
+  const grid = document.getElementById('modelsGrid');
+  const statKeys = Object.keys(m.stats || {});
+  const imgHTML = m.cover_url
+    ? `<img src="${m.cover_url}" alt="${m.name}" style="width:100%;height:100%;object-fit:cover;filter:grayscale(20%);transition:filter .4s,transform .4s" loading="lazy">`
+    : `<div class="card-img-gradient"><svg width="80" height="80" viewBox="0 0 80 80" fill="none"><circle cx="40" cy="28" r="18" stroke="#c9a96e" stroke-width="2" opacity="0.4"/><path d="M6 76c0-18.8 15.2-34 34-34s34 15.2 34 34" stroke="#c9a96e" stroke-width="2" stroke-linecap="round" opacity="0.4"/></svg></div>`;
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'model-card-wrapper';
+  wrapper.dataset.modelId   = m.id;
+  wrapper.dataset.modelName = (m.name||'').toLowerCase();
+  wrapper.innerHTML = `
+    <button class="card-delete-btn" onclick="deleteModel('${m.id}',this)" title="Delete">✕</button>
+    <a class="model-card" href="#" onclick="handleCardClick('${m.id}');return false;">
+      <div class="card-img">
+        ${imgHTML}
+        <div class="card-category-badge">${m.category||''}</div>
+        <div class="lock-badge">
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          Members Only
         </div>
-        <button class="pug-rm" id="pugRm${i}" onclick="removePhotoSlot(${i})" title="Remove">✕</button>`;
-      grid.appendChild(slot);
-    }
-  }
-
-  function handlePhotoSlot(idx, input) {
-    const file = input.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = e => {
-      draft.photos[idx] = e.target.result;
-      const img = document.getElementById(`pugImg${idx}`);
-      img.src = e.target.result;
-      img.classList.add('loaded');
-      document.getElementById(`pugSlot${idx}`).querySelector('.pug-placeholder').style.display = 'none';
-      document.getElementById(`pugRm${idx}`).classList.add('show');
-    };
-    reader.readAsDataURL(file);
-  }
-
-  function removePhotoSlot(idx) {
-    draft.photos[idx] = '';
-    const img = document.getElementById(`pugImg${idx}`);
-    img.src = ''; img.classList.remove('loaded');
-    document.getElementById(`pugSlot${idx}`).querySelector('.pug-placeholder').style.display = '';
-    document.getElementById(`pugRm${idx}`).classList.remove('show');
-    // Reset file input
-    const slot = document.getElementById(`pugSlot${idx}`);
-    const fi = slot.querySelector('input[type="file"]');
-    if (fi) fi.value = '';
-  }
-
-  // ── VIDEO ENTRIES ──
-  let videoEntryCount = 0;
-
-  function addVideoEntry(type) {
-    const idx = videoEntryCount++;
-    const container = document.getElementById('videoEntries');
-    const entry = document.createElement('div');
-    entry.className = 'video-entry';
-    entry.id = `videoEntry${idx}`;
-
-    const typeLabel = type === 'file' ? 'Upload File' : type === 'youtube' ? 'YouTube' : 'Vimeo';
-
-    let inner = `
-      <div class="video-entry-header">
-        <span class="video-entry-type">${typeLabel}</span>
-        <button class="video-entry-rm" onclick="removeVideoEntry(${idx})">✕</button>
       </div>
-      <div class="af-group" style="margin-bottom:0.6rem">
-        <label class="af-label">Label (e.g. "2024 Reel")</label>
-        <input class="af-input" id="vLabel${idx}" placeholder="Optional title">
-      </div>`;
-
-    if (type === 'file') {
-      inner += `
-        <div class="upload-zone" style="padding:1.2rem">
-          <input type="file" accept="video/*" id="vFile${idx}" onchange="handleVideoFile(${idx}, this)">
-          <div class="upload-zone-icon" style="margin-bottom:0.4rem">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-              <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/>
-            </svg>
-          </div>
-          <div class="upload-zone-text" style="font-size:0.75rem"><strong>Click</strong> to select video · MP4, MOV, WEBM</div>
+      <div class="card-body">
+        <div class="card-name">${m.name||''}</div>
+        <div class="card-meta">${m.nationality||''}</div>
+        <div class="card-mini-stats">
+          ${statKeys.slice(0,3).map(k=>`<div class="mini-stat"><div class="val">${m.stats[k]}</div><div class="key">${k}</div></div>`).join('')}
         </div>
-        <p id="vFileName${idx}" style="font-size:0.72rem;color:var(--gold);margin-top:0.3rem;display:none;"></p>`;
+        <div class="card-cta">View Full Profile →</div>
+      </div>
+    </a>`;
+  grid.appendChild(wrapper);
+}
+
+function handleCardClick(id) {
+  if (memberSession) { showModel(id); }
+  else { pendingModelId=id; const m=models.find(x=>x.id===id); openGate(m?m.name:''); }
+}
+
+// ═══════════════════════════════════════════
+// MODEL PROFILE
+// ═══════════════════════════════════════════
+async function showModel(id) {
+  const m = models.find(x => x.id === id);
+  if (!m) return;
+
+  document.getElementById('modelNameBg').textContent = (m.name||'').split(' ')[0].toUpperCase();
+  document.getElementById('modelTag').textContent    = `${m.category||''} · ${m.nationality||''}`;
+  document.getElementById('modelName').textContent   = m.name||'';
+  document.getElementById('modelCatBadge').textContent = m.category||'';
+  document.getElementById('modelBio').textContent    = m.bio||'';
+
+  const imgCol = document.getElementById('modelImgCol');
+  const ph     = document.getElementById('modelImgPlaceholder');
+  let existingImg = imgCol.querySelector('img.model-hero-img');
+  if (m.cover_url) {
+    ph.style.display='none';
+    if (existingImg) { existingImg.src=m.cover_url; existingImg.style.display=''; }
+    else { const img=document.createElement('img'); img.className='model-hero-img'; img.src=m.cover_url; img.style.cssText='width:100%;height:100%;object-fit:cover'; imgCol.insertBefore(img,imgCol.firstChild); }
+  } else {
+    if (existingImg) existingImg.style.display='none';
+    ph.style.display='';
+  }
+
+  document.getElementById('modelStatsGrid').innerHTML =
+    Object.entries(m.stats||{}).map(([k,v])=>`<div class="mstat"><div class="num">${v}</div><div class="key">${k}</div></div>`).join('');
+
+  buildPhotoGrid(m.model_photos||[]);
+  buildVideoGrid(m.model_videos||[]);
+
+  document.querySelectorAll('.ptab').forEach((t,i)=>t.classList.toggle('active',i===0));
+  document.getElementById('portfolioPhotoGrid').classList.remove('hidden');
+  document.getElementById('portfolioVideoGrid').classList.add('hidden');
+  document.getElementById('modelFormFields').style.display='';
+  document.getElementById('modelFormSuccess').style.display='none';
+  document.getElementById('main-page').style.display='none';
+  document.getElementById('model-page').style.display='block';
+  window.scrollTo(0,0);
+}
+
+function showHome() {
+  document.getElementById('model-page').style.display='none';
+  document.getElementById('main-page').style.display='block';
+  window.scrollTo(0,0);
+}
+
+function buildPhotoGrid(photos) {
+  const c = document.getElementById('portfolioPhotoGrid'); c.innerHTML='';
+  const sorted = [...photos].sort((a,b)=>a.position-b.position);
+  const filledUrls = sorted.map(p=>p.url).filter(Boolean);
+  for (let i=0;i<9;i++) {
+    const p=sorted[i]; const item=document.createElement('div'); item.className='pgrid-item';
+    if (p?.url) {
+      item.innerHTML=`<img src="${p.url}" alt="" loading="lazy"><div class="pgrid-overlay"><div class="pgrid-overlay-icon">⊕</div></div>`;
+      item.addEventListener('click',()=>openLightbox(filledUrls,filledUrls.indexOf(p.url)));
     } else {
-      const ph = type === 'youtube'
-        ? 'https://www.youtube.com/watch?v=...'
-        : 'https://vimeo.com/...';
-      inner += `
-        <div class="af-group" style="margin-bottom:0">
-          <label class="af-label">${typeLabel} URL</label>
-          <input class="af-input" id="vUrl${idx}" placeholder="${ph}" oninput="previewVideoUrl(${idx}, '${type}', this.value)">
-        </div>`;
+      item.innerHTML=`<div class="pgrid-slot"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span>No Photo</span></div>`;
     }
-
-    entry.dataset.type = type;
-    entry.dataset.idx = idx;
-    entry.innerHTML = inner;
-    container.appendChild(entry);
+    c.appendChild(item);
   }
+}
 
-  function removeVideoEntry(idx) {
-    const el = document.getElementById(`videoEntry${idx}`);
-    if (el) el.remove();
-  }
-
-  function handleVideoFile(idx, input) {
-    const file = input.files[0];
-    if (!file) return;
-    const fnEl = document.getElementById(`vFileName${idx}`);
-    if (fnEl) { fnEl.textContent = '✓ ' + file.name; fnEl.style.display = ''; }
-    // Store object URL for in-session playback
-    const entry = document.getElementById(`videoEntry${idx}`);
-    entry.dataset.fileUrl = URL.createObjectURL(file);
-  }
-
-  function previewVideoUrl(idx, type, val) {
-    // lightweight feedback — could add thumbnail later
-  }
-
-  function getVideoEntries() {
-    const entries = document.querySelectorAll('.video-entry');
-    const result = [];
-    entries.forEach(entry => {
-      const type = entry.dataset.type;
-      const idx  = entry.dataset.idx;
-      const label = (document.getElementById(`vLabel${idx}`) || {}).value || '';
-
-      if (type === 'file') {
-        const fileUrl = entry.dataset.fileUrl || '';
-        if (fileUrl) result.push({ type: 'file', src: fileUrl, label });
-      } else {
-        const raw = (document.getElementById(`vUrl${idx}`) || {}).value || '';
-        if (raw.trim()) {
-          const embed = convertToEmbed(type, raw.trim());
-          if (embed) result.push({ type, src: embed, label });
-        }
-      }
-    });
-    return result;
-  }
-
-  function convertToEmbed(type, url) {
-    if (type === 'youtube') {
-      const m = url.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
-      return m ? `https://www.youtube.com/embed/${m[1]}` : null;
+function buildVideoGrid(videos) {
+  const c=document.getElementById('portfolioVideoGrid'); c.innerHTML='';
+  const sorted=[...videos].sort((a,b)=>a.position-b.position);
+  const total=Math.max(sorted.length,3);
+  for (let i=0;i<total;i++) {
+    const v=sorted[i]; const slot=document.createElement('div'); slot.className='video-slot';
+    if (v) {
+      if (v.type==='file') slot.innerHTML=`<video controls preload="metadata"><source src="${v.src}" type="video/mp4"></video>${v.label?`<div class="video-slot-label">${v.label}</div>`:''}`;
+      else slot.innerHTML=`<iframe src="${v.src}" allow="autoplay;fullscreen;picture-in-picture" allowfullscreen></iframe>${v.label?`<div class="video-slot-label">${v.label}</div>`:''}`;
+    } else {
+      const labels=['Feature Reel','BTS Footage','Campaign Video'];
+      slot.innerHTML=`<div class="video-slot-empty"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg><span>${labels[i]||'Video'}</span></div>`;
     }
-    if (type === 'vimeo') {
-      const m = url.match(/vimeo\.com\/(\d+)/);
-      return m ? `https://player.vimeo.com/video/${m[1]}` : null;
-    }
-    return null;
+    c.appendChild(slot);
   }
+}
 
-  // ── SAVE MODEL ──
-  function saveModel() {
-    const fname = document.getElementById('af-fname').value.trim();
-    const lname = document.getElementById('af-lname').value.trim();
-    const cat   = document.getElementById('af-category').value;
+function switchTab(tab) {
+  document.querySelectorAll('.ptab').forEach(t=>t.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('portfolioPhotoGrid').classList.toggle('hidden',tab!=='photos');
+  document.getElementById('portfolioVideoGrid').classList.toggle('hidden',tab!=='video');
+}
 
-    if (!fname || !lname) { shakeField('af-fname'); return; }
-    if (!cat)              { shakeField('af-category'); return; }
+// ═══════════════════════════════════════════
+// LIGHTBOX
+// ═══════════════════════════════════════════
+function openLightbox(images,index) { lbImages=images;lbIndex=index;document.getElementById('lightboxImg').src=lbImages[lbIndex];document.getElementById('lightbox').classList.add('open');document.body.style.overflow='hidden'; }
+function closeLightbox(e) { if(e&&e.target!==e.currentTarget)return;document.getElementById('lightbox').classList.remove('open');document.getElementById('lightboxImg').src='';document.body.style.overflow=''; }
+function lightboxNav(dir) { lbIndex=(lbIndex+dir+lbImages.length)%lbImages.length;document.getElementById('lightboxImg').src=lbImages[lbIndex]; }
 
-    const newModel = {
-      id: nextId++,
-      name: `${fname} ${lname}`,
-      category: cat,
-      nationality: document.getElementById('af-location').value.trim() || 'Location TBD',
-      img: draft.coverDataUrl || '',
-      bio: document.getElementById('af-bio').value.trim() || `${fname} is a talented ${cat.toLowerCase()} model ready to take on exciting projects.`,
-      stats: getStatsFromForm(),
-      photos: [...draft.photos],
-      videos: getVideoEntries(),
-    };
+// ═══════════════════════════════════════════
+// SEARCH
+// ═══════════════════════════════════════════
+function filterModels(q) {
+  q=q.trim().toLowerCase();
+  document.getElementById('searchClear').style.display=q?'':'none';
+  let visible=0;
+  document.querySelectorAll('.model-card-wrapper').forEach(w=>{ const match=!q||w.dataset.modelName.includes(q); w.style.display=match?'':'none'; if(match)visible++; });
+  const meta=document.getElementById('searchMeta'); const noRes=document.getElementById('noResults');
+  if (q) { meta.style.display=''; document.getElementById('searchCount').textContent=visible; document.getElementById('searchPlural').textContent=visible===1?'':'s'; document.getElementById('searchTerm').textContent=q; document.getElementById('noResultsTerm').textContent=q; noRes.style.display=visible===0?'flex':'none'; }
+  else { meta.style.display='none'; noRes.style.display='none'; }
+}
+function clearSearch() { document.getElementById('searchInput').value=''; filterModels(''); document.getElementById('searchInput').focus(); }
 
-    models.push(newModel);
-    addModelCard(newModel);
-    closeAdmin();
-    showToast(`${newModel.name} added to the roster ✦`);
+// ═══════════════════════════════════════════
+// MEMBER AUTH (Supabase)
+// ═══════════════════════════════════════════
+function openMemberModal(tab) {
+  document.getElementById('authModal').classList.add('open');
+  document.body.style.overflow='hidden';
+  switchAuthTab(tab||'login');
+  showCheckoutStep('account');
+  document.getElementById('loginError').textContent='';
+  document.getElementById('signupError').textContent='';
+}
+function closeAuthModal() { document.getElementById('authModal').classList.remove('open'); document.body.style.overflow=''; }
+function switchAuthTab(tab) {
+  ['login','signup'].forEach(t=>{ const c=t.charAt(0).toUpperCase()+t.slice(1); document.getElementById(`authTab${c}`).classList.toggle('active',t===tab); document.getElementById(`authPanel${c}`).classList.toggle('active',t===tab); });
+}
+
+async function doLogin() {
+  const email=document.getElementById('loginEmail').value.trim();
+  const password=document.getElementById('loginPassword').value;
+  const errEl=document.getElementById('loginError');
+  const btn=document.getElementById('loginBtn');
+  if(!email||!password){errEl.textContent='Please fill in all fields.';return;}
+  btn.textContent='Signing in…';btn.disabled=true;
+  const {data,error}=await sb.auth.signInWithPassword({email,password});
+  btn.textContent='Sign In →';btn.disabled=false;
+  if(error){errEl.textContent=error.message;return;}
+  memberSession=data.user;
+  closeAuthModal();
+  updateNavForMember();
+  showToast('Welcome back! ✦');
+  if(pendingModelId){const id=pendingModelId;pendingModelId=null;setTimeout(()=>showModel(id),300);}
+}
+
+async function proceedToCheckout() {
+  const fname=document.getElementById('signupFname').value.trim();
+  const lname=document.getElementById('signupLname').value.trim();
+  const email=document.getElementById('signupEmail').value.trim();
+  const password=document.getElementById('signupPassword').value;
+  const errEl=document.getElementById('signupError');
+  const btn=document.getElementById('signupBtn');
+  if(!fname||!lname||!email||!password){errEl.textContent='Please fill in all fields.';return;}
+  if(password.length<8){errEl.textContent='Password must be at least 8 characters.';return;}
+  btn.textContent='Creating account…';btn.disabled=true;
+  const {data,error}=await sb.auth.signUp({email,password,options:{data:{full_name:`${fname} ${lname}`}}});
+  btn.textContent='Continue to Payment →';btn.disabled=false;
+  if(error){errEl.textContent=error.message;return;}
+  pendingSignup={name:`${fname} ${lname}`,email,userId:data.user?.id};
+  await sb.from('members').upsert({id:data.user?.id,full_name:`${fname} ${lname}`,plan:selectedPlan,subscription_status:'pending'});
+  sessionStorage.setItem('nl_pending_signup',JSON.stringify({...pendingSignup,plan:selectedPlan}));
+  sessionStorage.setItem('nl_pending_model',pendingModelId||'');
+  updateCheckoutSummary();
+  showCheckoutStep('payment');
+}
+
+function showCheckoutStep(step) {
+  document.querySelectorAll('.checkout-step').forEach(el=>el.classList.remove('active'));
+  document.getElementById(`checkoutStep${step.charAt(0).toUpperCase()+step.slice(1)}`).classList.add('active');
+}
+function updateCheckoutSummary() {
+  const plan=PLAN_LABELS[selectedPlan]||PLAN_LABELS.monthly;
+  ['','2'].forEach(s=>{const n=document.getElementById(`checkoutPlanName${s}`);if(n)n.textContent=plan.name;const p=document.getElementById(`checkoutPlanPrice${s}`);if(p)p.textContent=plan.price;});
+}
+
+function goToStripe() {
+  const link=STRIPE_LINKS[selectedPlan];
+  if(link&&!link.includes('YOUR_')){window.location.href=link;}
+  else{handleStripeReturn();}
+}
+
+async function handleStripeReturn() {
+  const saved=sessionStorage.getItem('nl_pending_signup');
+  if(saved){
+    const data=JSON.parse(saved);
+    pendingSignup=data;selectedPlan=data.plan||'monthly';
+    const sm=sessionStorage.getItem('nl_pending_model');if(sm)pendingModelId=sm||null;
+    sessionStorage.removeItem('nl_pending_signup');sessionStorage.removeItem('nl_pending_model');
+    if(data.userId) await sb.from('members').update({subscription_status:'active',plan:selectedPlan}).eq('id',data.userId);
   }
+  const {data:{session}}=await sb.auth.getSession();
+  if(session){memberSession=session.user;updateNavForMember();}
+  closeAuthModal();
+  document.getElementById('successName').textContent=pendingSignup?.name?.split(' ')[0]||'Member';
+  document.getElementById('successModal').classList.add('open');
+  document.body.style.overflow='hidden';
+}
 
-  function shakeField(id) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.style.borderColor = '#ff6060';
-    el.style.animation = 'none';
-    setTimeout(() => { el.style.animation = ''; }, 10);
-    setTimeout(() => { el.style.borderColor = ''; }, 1500);
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
+function closeSuccessModal() {
+  document.getElementById('successModal').classList.remove('open');
+  document.body.style.overflow='';
+  if(pendingModelId){const id=pendingModelId;pendingModelId=null;setTimeout(()=>showModel(id),300);}
+}
 
-  // ── ADD CARD TO GRID (used by admin save) ──
-  function addModelCard(m) {
-    buildModelCard(m);
-  }
+async function logoutMember() {
+  await sb.auth.signOut();
+  memberSession=null;pendingModelId=null;
+  resetNavToLoggedOut();
+  showToast('You have been signed out.');
+  if(document.getElementById('model-page').style.display!=='none')showHome();
+}
 
-  // ── DELETE MODEL ──
-  function deleteModel(id, btn) {
-    const idx = models.findIndex(m => m.id === id);
-    if (idx === -1) return;
-    models.splice(idx, 1);
-    btn.closest('.model-card-wrapper').remove();
-    showToast('Model removed from roster');
-  }
+function updateNavForMember() {
+  const meta=memberSession?.user_metadata;
+  const name=meta?.full_name||memberSession?.email||'Member';
+  const first=name.split(' ')[0];
+  document.getElementById('navLoginBtn').style.display='none';
+  document.getElementById('navAvatar').textContent=first.charAt(0).toUpperCase();
+  document.getElementById('navUserName').textContent=first;
+  document.getElementById('navUser').style.display='flex';
+  document.getElementById('mobileAuthLink').textContent=`Hi, ${first} — Sign Out`;
+  document.getElementById('mobileAuthLink').onclick=()=>{closeMenu();logoutMember();};
+}
 
-  // ── TOAST ──
-  let toastTimer;
-  function showToast(msg) {
-    const toast = document.getElementById('toast');
-    document.getElementById('toastMsg').textContent = msg;
-    toast.classList.add('show');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toast.classList.remove('show'), 3500);
-  }
+function resetNavToLoggedOut() {
+  document.getElementById('navLoginBtn').style.display='';
+  document.getElementById('navUser').style.display='none';
+  document.getElementById('mobileAuthLink').textContent='Members Login';
+  document.getElementById('mobileAuthLink').onclick=()=>{closeMenu();openMemberModal('login');};
+}
 
-  // ── INIT: Wrap existing model cards so delete buttons work in admin mode ──
-  // (existing cards from the initial models array don't need wrappers for now;
-  //  newly added cards via addModelCard() already get wrappers)
+// ═══════════════════════════════════════════
+// GATE
+// ═══════════════════════════════════════════
+function openGate(modelName) { document.getElementById('gateModelName').textContent=modelName?`Sign in to view ${modelName}'s full profile.`:''; document.getElementById('gateModal').classList.add('open'); document.body.style.overflow='hidden'; }
+function closeGate() { document.getElementById('gateModal').classList.remove('open'); document.body.style.overflow=''; }
 
+// ═══════════════════════════════════════════
+// PRICING
+// ═══════════════════════════════════════════
+function openPricingModal() { document.getElementById('pricingModal').classList.add('open'); document.body.style.overflow='hidden'; selectPlan('annual',false); }
+function closePricingModal() { document.getElementById('pricingModal').classList.remove('open'); document.body.style.overflow=''; }
+function selectPlan(planKey,proceed=true) {
+  selectedPlan=planKey;
+  ['monthly','annual','agency'].forEach(p=>document.getElementById(`planCard${p.charAt(0).toUpperCase()+p.slice(1)}`).classList.toggle('selected',p===planKey));
+  if(proceed){closePricingModal();openMemberModal('signup');}
+}
+
+// ═══════════════════════════════════════════
+// ADMIN PASSWORD
+// ═══════════════════════════════════════════
+document.addEventListener('keydown',e=>{
+  if(e.shiftKey&&e.key==='A'&&!adminOpen){isAuthenticated?toggleAdmin():openPwModal();}
+  if(e.key==='Escape'){closePwModal();closeGate();closeAuthModal();closePricingModal();if(adminOpen)closeAdmin();if(document.getElementById('lightbox').classList.contains('open'))closeLightbox();}
+});
+function openPwModal(){document.getElementById('pwModal').classList.add('open');document.getElementById('pwInput').value='';document.getElementById('pwError').textContent='';document.body.style.overflow='hidden';setTimeout(()=>document.getElementById('pwInput').focus(),100);}
+function closePwModal(){document.getElementById('pwModal').classList.remove('open');document.body.style.overflow='';}
+function togglePwVisibility(){const inp=document.getElementById('pwInput');inp.type=inp.type==='password'?'text':'password';}
+function checkPassword(){
+  const val=document.getElementById('pwInput').value;const inp=document.getElementById('pwInput');const err=document.getElementById('pwError');
+  if(val===ADMIN_PASSWORD){isAuthenticated=true;closePwModal();document.getElementById('adminFab').classList.add('unlocked');document.body.classList.add('admin-mode-active');showToast('Admin mode unlocked ✦');}
+  else{err.textContent='Incorrect password.';inp.classList.add('error');inp.value='';setTimeout(()=>inp.classList.remove('error'),400);}
+}
+
+// ═══════════════════════════════════════════
+// ADMIN DRAWER
+// ═══════════════════════════════════════════
+function toggleAdmin(){adminOpen?closeAdmin():openAdmin();}
+function openAdmin(){adminOpen=true;resetDraft();document.getElementById('adminFab').classList.add('open');document.getElementById('adminOverlay').classList.add('open');document.getElementById('adminDrawer').classList.add('open');document.body.style.overflow='hidden';goStep(0);buildPhotoUploadGrid();renderStatBuilder();}
+function closeAdmin(){adminOpen=false;document.getElementById('adminFab').classList.remove('open');document.getElementById('adminOverlay').classList.remove('open');document.getElementById('adminDrawer').classList.remove('open');document.body.style.overflow='';}
+
+function resetDraft(){
+  coverFile=null;photoFiles=Array(9).fill(null);window._videoFiles={};
+  ['af-fname','af-lname','af-location','af-bio'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const cat=document.getElementById('af-category');if(cat)cat.value='';
+  document.getElementById('coverPreview').classList.remove('visible');
+  document.getElementById('coverChangeBtn').classList.remove('visible');
+  document.getElementById('coverZone').style.display='';
+  document.getElementById('coverInput').value='';
+  document.getElementById('videoEntries').innerHTML='';
+  videoEntryCount=0;
+}
+
+function goStep(n){
+  currentStep=n;
+  document.querySelectorAll('.step-panel').forEach((p,i)=>p.classList.toggle('active',i===n));
+  document.querySelectorAll('.drawer-step-btn').forEach((b,i)=>b.classList.toggle('active',i===n));
+  document.getElementById('drawerBackBtn').style.display=n>0?'':'none';
+  const nb=document.getElementById('drawerNextBtn');
+  if(n<2)nb.textContent=n===0?'Next: Photos →':'Next: Videos →'; else nb.textContent='✦ Save Model';
+}
+function drawerNav(dir){if(currentStep===2&&dir===1){saveModel();return;}if(currentStep+dir<0||currentStep+dir>2)return;goStep(currentStep+dir);}
+
+// Cover upload
+function handleCoverUpload(input){
+  const file=input.files[0];if(!file)return;coverFile=file;
+  const reader=new FileReader();reader.onload=e=>{const prev=document.getElementById('coverPreview');prev.src=e.target.result;prev.classList.add('visible');document.getElementById('coverChangeBtn').classList.add('visible');document.getElementById('coverZone').style.display='none';};reader.readAsDataURL(file);
+}
+const czEl=document.getElementById('coverZone');
+if(czEl){
+  czEl.addEventListener('dragover',e=>{e.preventDefault();czEl.classList.add('drag-over');});
+  czEl.addEventListener('dragleave',()=>czEl.classList.remove('drag-over'));
+  czEl.addEventListener('drop',e=>{e.preventDefault();czEl.classList.remove('drag-over');const file=e.dataTransfer.files[0];if(file&&file.type.startsWith('image/')){const dt=new DataTransfer();dt.items.add(file);document.getElementById('coverInput').files=dt.files;handleCoverUpload(document.getElementById('coverInput'));}});
+}
+
+// Stats
+function renderStatBuilder(){statRows=[{label:'Shoots',value:''}];const b=document.getElementById('statBuilder');b.innerHTML='';addStatRowElement(0);}
+function addStatRow(){statRows.push({label:'',value:''});addStatRowElement(statRows.length-1);}
+function addStatRowElement(idx){const b=document.getElementById('statBuilder');const row=document.createElement('div');row.className='stat-row-input';row.id=`statRow${idx}`;row.innerHTML=`<input class="af-input" placeholder="Label" id="stat-label-${idx}" value="${statRows[idx]?.label||''}"><input class="af-input" placeholder="Value" type="number" id="stat-value-${idx}" value="${statRows[idx]?.value||''}"><button class="stat-remove" onclick="removeStatRow(${idx})">✕</button>`;b.appendChild(row);}
+function removeStatRow(idx){const el=document.getElementById(`statRow${idx}`);if(el)el.remove();statRows[idx]=null;}
+function getStatsFromForm(){const s={};statRows.forEach((_,i)=>{const l=document.getElementById(`stat-label-${i}`);const v=document.getElementById(`stat-value-${i}`);if(l&&v&&l.value.trim())s[l.value.trim()]=parseInt(v.value)||0;});return s;}
+
+// Photo grid
+function buildPhotoUploadGrid(){const g=document.getElementById('photoUploadGrid');g.innerHTML='';photoFiles=Array(9).fill(null);for(let i=0;i<9;i++){const s=document.createElement('div');s.className='pug-slot';s.id=`pugSlot${i}`;s.innerHTML=`<input type="file" accept="image/*" onchange="handlePhotoSlot(${i},this)"><img id="pugImg${i}" alt=""><div class="pug-placeholder"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span>Add</span></div><button class="pug-rm" id="pugRm${i}" onclick="removePhotoSlot(${i})">✕</button>`;g.appendChild(s);}}
+function handlePhotoSlot(idx,input){const file=input.files[0];if(!file)return;photoFiles[idx]=file;const r=new FileReader();r.onload=e=>{const img=document.getElementById(`pugImg${idx}`);img.src=e.target.result;img.classList.add('loaded');document.getElementById(`pugSlot${idx}`).querySelector('.pug-placeholder').style.display='none';document.getElementById(`pugRm${idx}`).classList.add('show');};r.readAsDataURL(file);}
+function removePhotoSlot(idx){photoFiles[idx]=null;const img=document.getElementById(`pugImg${idx}`);img.src='';img.classList.remove('loaded');document.getElementById(`pugSlot${idx}`).querySelector('.pug-placeholder').style.display='';document.getElementById(`pugRm${idx}`).classList.remove('show');const fi=document.getElementById(`pugSlot${idx}`).querySelector('input');if(fi)fi.value='';}
+
+// Video entries
+function addVideoEntry(type){
+  const idx=videoEntryCount++;const c=document.getElementById('videoEntries');const entry=document.createElement('div');entry.className='video-entry';entry.id=`videoEntry${idx}`;entry.dataset.type=type;entry.dataset.idx=idx;
+  const tl=type==='file'?'Upload File':type==='youtube'?'YouTube':'Vimeo';
+  let inner=`<div class="video-entry-header"><span class="video-entry-type">${tl}</span><button class="video-entry-rm" onclick="removeVideoEntry(${idx})">✕</button></div><div class="af-group" style="margin-bottom:.6rem"><label class="af-label">Label (optional)</label><input class="af-input" id="vLabel${idx}" placeholder="e.g. 2024 Reel"></div>`;
+  if(type==='file'){inner+=`<div class="upload-zone" style="padding:1.2rem"><input type="file" accept="video/*" id="vFile${idx}" onchange="handleVideoFile(${idx},this)"><div class="upload-zone-icon" style="margin-bottom:.4rem"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div><div class="upload-zone-text" style="font-size:.75rem"><strong>Click</strong> to select · MP4, MOV</div></div><p id="vFileName${idx}" style="font-size:.72rem;color:var(--gold);margin-top:.3rem;display:none"></p>`;}
+  else{const ph=type==='youtube'?'https://www.youtube.com/watch?v=...':'https://vimeo.com/...';inner+=`<div class="af-group" style="margin-bottom:0"><label class="af-label">${tl} URL</label><input class="af-input" id="vUrl${idx}" placeholder="${ph}"></div>`;}
+  entry.innerHTML=inner;c.appendChild(entry);
+}
+function removeVideoEntry(idx){const el=document.getElementById(`videoEntry${idx}`);if(el)el.remove();}
+function handleVideoFile(idx,input){const file=input.files[0];if(!file)return;const fn=document.getElementById(`vFileName${idx}`);if(fn){fn.textContent='✓ '+file.name;fn.style.display='';}if(!window._videoFiles)window._videoFiles={};window._videoFiles[idx]=file;}
+function getVideoEntries(){const r=[];document.querySelectorAll('.video-entry').forEach(e=>{const type=e.dataset.type;const idx=e.dataset.idx;const label=(document.getElementById(`vLabel${idx}`)||{}).value||'';if(type==='file'){const file=(window._videoFiles||{})[idx];if(file)r.push({type:'file',file,label});}else{const raw=(document.getElementById(`vUrl${idx}`)||{}).value||'';if(raw.trim()){const embed=convertToEmbed(type,raw.trim());if(embed)r.push({type,src:embed,label});}}});return r;}
+function convertToEmbed(type,url){if(type==='youtube'){const m=url.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);return m?`https://www.youtube.com/embed/${m[1]}`:null;}if(type==='vimeo'){const m=url.match(/vimeo\.com\/(\d+)/);return m?`https://player.vimeo.com/video/${m[1]}`:null;}return null;}
+
+// ═══════════════════════════════════════════
+// SAVE MODEL (Supabase)
+// ═══════════════════════════════════════════
+async function saveModel(){
+  const fname=document.getElementById('af-fname').value.trim();const lname=document.getElementById('af-lname').value.trim();const cat=document.getElementById('af-category').value;
+  if(!fname||!lname){shakeField('af-fname');return;}if(!cat){shakeField('af-category');return;}
+  const btn=document.getElementById('drawerNextBtn');btn.textContent='Saving…';btn.disabled=true;
+  try{
+    let cover_url='';
+    if(coverFile){setProgress('cover',10);const ext=coverFile.name.split('.').pop();const path=`covers/${Date.now()}.${ext}`;const{error:upErr}=await sb.storage.from('model-covers').upload(path,coverFile,{upsert:true});if(upErr)throw upErr;const{data:uD}=sb.storage.from('model-covers').getPublicUrl(path);cover_url=uD.publicUrl;setProgress('cover',100);}
+    const{data:nm,error:mErr}=await sb.from('models').insert({name:`${fname} ${lname}`,category:cat,nationality:document.getElementById('af-location').value.trim()||'',bio:document.getElementById('af-bio').value.trim()||'',cover_url,stats:getStatsFromForm()}).select().single();if(mErr)throw mErr;
+    const photoEntries=[];const photosToDo=photoFiles.filter(Boolean);
+    for(let i=0;i<photoFiles.length;i++){const file=photoFiles[i];if(!file)continue;const ext=file.name.split('.').pop();const path=`${nm.id}/${Date.now()}_${i}.${ext}`;setProgress('photos',Math.round((photosToDo.indexOf(file)/photosToDo.length)*90));const{error:pErr}=await sb.storage.from('model-photos').upload(path,file,{upsert:true});if(pErr)throw pErr;const{data:pU}=sb.storage.from('model-photos').getPublicUrl(path);photoEntries.push({model_id:nm.id,url:pU.publicUrl,position:i});}
+    if(photoEntries.length){const{error:phErr}=await sb.from('model_photos').insert(photoEntries);if(phErr)throw phErr;}setProgress('photos',100);
+    const videoEntries=getVideoEntries();const videoRows=[];
+    for(let i=0;i<videoEntries.length;i++){const v=videoEntries[i];if(v.type==='file'&&v.file){const ext=v.file.name.split('.').pop();const path=`${nm.id}/${Date.now()}_${i}.${ext}`;const{error:vErr}=await sb.storage.from('model-videos').upload(path,v.file,{upsert:true});if(vErr)throw vErr;const{data:vU}=sb.storage.from('model-videos').getPublicUrl(path);videoRows.push({model_id:nm.id,type:'file',src:vU.publicUrl,label:v.label||'',position:i});}else if(v.src){videoRows.push({model_id:nm.id,type:v.type,src:v.src,label:v.label||'',position:i});}}
+    if(videoRows.length){const{error:vrErr}=await sb.from('model_videos').insert(videoRows);if(vrErr)throw vrErr;}
+    nm.model_photos=photoEntries;nm.model_videos=videoRows;models.unshift(nm);buildModelCard(nm);
+    closeAdmin();showToast(`${nm.name} added to the roster ✦`);
+  }catch(err){console.error(err);showToast('Error: '+err.message);}
+  finally{btn.textContent='✦ Save Model';btn.disabled=false;hideProgress('cover');hideProgress('photos');}
+}
+
+async function deleteModel(id,btn){
+  if(!confirm('Delete this model and all their media?'))return;
+  const{error}=await sb.from('models').delete().eq('id',id);
+  if(error){showToast('Error: '+error.message);return;}
+  models=models.filter(m=>m.id!==id);btn.closest('.model-card-wrapper').remove();showToast('Model removed from roster');
+}
+
+function setProgress(type,pct){const bar=document.getElementById(`${type}ProgressBar`);const wrap=document.getElementById(`${type}Progress`);if(!bar||!wrap)return;wrap.classList.add('show');bar.style.width=pct+'%';}
+function hideProgress(type){const wrap=document.getElementById(`${type}Progress`);if(wrap)wrap.classList.remove('show');}
+
+// ═══════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════
+function submitForm(fId,sId){document.getElementById(fId).style.display='none';document.getElementById(sId).style.display='block';}
+function shakeField(id){const el=document.getElementById(id);if(!el)return;el.style.borderColor='#ff6060';setTimeout(()=>el.style.borderColor='',1500);el.scrollIntoView({behavior:'smooth',block:'center'});}
+let toastTimer;
+function showToast(msg){const t=document.getElementById('toast');document.getElementById('toastMsg').textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),3500);}
+function toggleMenu(){document.getElementById('hamburger').classList.toggle('open');document.getElementById('mobileMenu').classList.toggle('open');}
+function closeMenu(){document.getElementById('hamburger').classList.remove('open');document.getElementById('mobileMenu').classList.remove('open');}
 </script>
 </body>
 </html>
