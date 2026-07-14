@@ -2645,7 +2645,7 @@
       <span class="admin-toolbar-email" id="adminToolbarEmail"></span>
     </div>
     <div class="admin-toolbar-right">
-      <button class="admin-toolbar-btn" onclick="openAdmin()">
+      <button class="admin-toolbar-btn" onclick="toggleAdmin()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Add New Model
       </button>
@@ -3206,7 +3206,7 @@
       <p class="admin-auth-sub" style="margin-bottom:1.5rem">
         Logged in as <strong id="adminLoggedInEmail" style="color:var(--gold)"></strong>
       </p>
-      <button class="admin-auth-submit" onclick="closeAdminModal(); setTimeout(openAdmin, 100)" style="margin-bottom:.8rem">
+      <button class="admin-auth-submit" onclick="closeAdminModal(); setTimeout(toggleAdmin, 150)" style="margin-bottom:.8rem">
         + Add New Model
       </button>
       <br>
@@ -3821,7 +3821,21 @@ document.addEventListener('keydown', e => {
 // ADMIN DRAWER
 // ═══════════════════════════════════════════
 function toggleAdmin(){adminOpen?closeAdmin():openAdmin();}
-function openAdmin(){adminOpen=true;resetDraft();document.getElementById('adminFab').classList.add('open');document.getElementById('adminOverlay').classList.add('open');document.getElementById('adminDrawer').classList.add('open');document.body.style.overflow='hidden';goStep(0);buildPhotoUploadGrid();renderStatBuilder();}
+function openAdmin(){
+  // Make sure we're on the main page
+  if(document.getElementById('model-page').style.display!=='none'){
+    showHome();
+  }
+  adminOpen=true;
+  resetDraft();
+  document.getElementById('adminFab').classList.add('open');
+  document.getElementById('adminOverlay').classList.add('open');
+  document.getElementById('adminDrawer').classList.add('open');
+  document.body.style.overflow='hidden';
+  goStep(0);
+  buildPhotoUploadGrid();
+  renderStatBuilder();
+}
 function closeAdmin(){adminOpen=false;document.getElementById('adminFab').classList.remove('open');document.getElementById('adminOverlay').classList.remove('open');document.getElementById('adminDrawer').classList.remove('open');document.body.style.overflow='';}
 
 function resetDraft(){
