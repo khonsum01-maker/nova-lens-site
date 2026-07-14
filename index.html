@@ -3356,6 +3356,13 @@
   <span id="toastMsg">Model added successfully!</span>
 </div>
 
+<!-- FIXED ADD MODEL BUTTON — only visible when admin logged in -->
+<button id="addModelBtn"
+  onclick="resetDraft();document.getElementById('adminOverlay').classList.add('open');document.getElementById('adminDrawer').classList.add('open');document.body.style.overflow='hidden';adminOpen=true;goStep(0);buildPhotoUploadGrid();renderStatBuilder();"
+  style="display:none;position:fixed;bottom:5.5rem;right:1.5rem;z-index:9999;background:#c9a96e;color:#06080a;border:none;border-radius:4px;padding:.75rem 1.4rem;font-family:'DM Sans',sans-serif;font-size:.8rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;box-shadow:0 4px 20px rgba(201,169,110,.5);">
+  + Add Model
+</button>
+
 <script>
 // ═══════════════════════════════════════════
 // SUPABASE INIT
@@ -3780,8 +3787,9 @@ async function doAdminLogin() {
   document.getElementById('adminToolbarEmail').textContent = data.user.email;
   document.getElementById('adminToolbar').style.display = '';
   document.getElementById('navAddModel').style.display = '';
+  document.getElementById('addModelBtn').style.display = 'block';
   showAdminLoggedInPanel();
-  showToast('Admin mode on — use the toolbar to add models ✦');
+  showToast('Admin mode on ✦ Use the gold button to add models');
 }
 
 function showAdminLoggedInPanel() {
@@ -3803,6 +3811,7 @@ async function doAdminLogout() {
     Admin`;
   document.getElementById('adminToolbar').style.display = 'none';
   document.getElementById('navAddModel').style.display = 'none';
+  document.getElementById('addModelBtn').style.display = 'none';
   closeAdminModal();
   closeAdmin();
   showToast('Signed out of admin.');
