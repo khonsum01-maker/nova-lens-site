@@ -755,10 +755,9 @@ const STRIPE_LINKS = {
 };
 
 // ══════════════════════════════════════
-// INIT — use window.onload to ensure
-// Supabase CDN is fully loaded first
+// INIT — wait for Supabase CDN to load
 // ══════════════════════════════════════
-window.addEventListener('load', async () => {
+async function initApp() {
   // Init Supabase client
   sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -778,7 +777,14 @@ window.addEventListener('load', async () => {
     window.history.replaceState({}, '', window.location.pathname);
     setTimeout(handleStripeReturn, 500);
   }
-});
+}
+
+// Run after everything is loaded
+if (document.readyState === 'complete') {
+  initApp();
+} else {
+  window.addEventListener('load', initApp);
+}
 
 // ══════════════════════════════════════
 // LOAD MODELS
