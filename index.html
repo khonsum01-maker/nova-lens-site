@@ -437,7 +437,7 @@
     <div class="search-wrap">
       <div class="search-bar">
         <svg class="search-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" class="search-input" id="searchInput" placeholder="Search by model name…" oninput="filterModels(this.value)" autocomplete="off">
+        <input type="text" class="search-input" id="searchInput" placeholder="Search by model name…" oninput="if(typeof filterModels==='function')filterModels(this.value)" autocomplete="off">
         <button class="search-clear" id="searchClear" onclick="clearSearch()" style="display:none">✕</button>
       </div>
       <div class="search-meta" id="searchMeta" style="display:none">Showing <strong id="searchCount">0</strong> result<span id="searchPlural">s</span> for "<span id="searchTerm"></span>"</div>
@@ -780,7 +780,6 @@ async function initApp() {
 }
 
 // Run after everything is loaded
-// TEST LINE 
 if (document.readyState === 'complete') {
   initApp();
 } else {
@@ -792,17 +791,34 @@ if (document.readyState === 'complete') {
 // ══════════════════════════════════════
 async function loadModels() {
   const grid = document.getElementById('modelsGrid');
-  const { data, error } = await sb
-    .from('models')
-    .select('*, model_photos(url,position), model_videos(type,src,label,position)')
-    .order('created_at', { ascending: false });
 
-  ['sk1','sk2','sk3','sk4'].forEach(id => { const el = document.getElementById(id); if (el) el.remove(); });
+  // Always remove skeletons first
+  ['sk1','sk2','sk3','sk4'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.remove();
+  });
 
-  if (error) { console.error(error); grid.innerHTML = '<p style="color:var(--muted);padding:2rem">Could not load models. Please refresh.</p>'; return; }
+  try {
+    const { data, error } = await sb
+      .from('models')
+      .select('*, model_photos(url,position), model_videos(type,src,label,position)')
+      .order('created_at', { ascending: false });
 
-  models = data || [];
-  models.forEach(m => buildModelCard(m));
+    if (error) throw error;
+
+    models = data || [];
+
+    if (models.length === 0) {
+      grid.innerHTML = '<p style="color:var(--muted);padding:2rem;grid-column:1/-1">No models added yet.</p>';
+      return;
+    }
+
+    models.forEach(m => buildModelCard(m));
+
+  } catch (err) {
+    console.error('loadModels error:', err);
+    grid.innerHTML = `<p style="color:#ff7070;padding:2rem;grid-column:1/-1">Error loading models: ${err.message}</p>`;
+  }
 }
 
 // ══════════════════════════════════════
