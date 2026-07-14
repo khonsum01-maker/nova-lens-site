@@ -2611,6 +2611,7 @@
     <li><a href="#roster" onclick="showHome()">Models</a></li>
     <li><a href="#about" onclick="showHome()">About</a></li>
     <li><a href="#contact" onclick="showHome()">Booking</a></li>
+    <li id="navAddModel" style="display:none"><a href="#" onclick="toggleAdmin();return false;" style="color:var(--gold);opacity:1">+ Add Model</a></li>
   </ul>
   <div class="nav-right">
     <!-- Logged OUT state -->
@@ -3778,6 +3779,7 @@ async function doAdminLogin() {
   // Show toolbar
   document.getElementById('adminToolbarEmail').textContent = data.user.email;
   document.getElementById('adminToolbar').style.display = '';
+  document.getElementById('navAddModel').style.display = '';
   showAdminLoggedInPanel();
   showToast('Admin mode on — use the toolbar to add models ✦');
 }
@@ -3800,6 +3802,7 @@ async function doAdminLogout() {
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
     Admin`;
   document.getElementById('adminToolbar').style.display = 'none';
+  document.getElementById('navAddModel').style.display = 'none';
   closeAdminModal();
   closeAdmin();
   showToast('Signed out of admin.');
