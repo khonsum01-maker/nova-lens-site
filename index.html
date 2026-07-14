@@ -2514,6 +2514,83 @@
     /* Keep admin-mode-active class for delete buttons */
     .admin-mode-active .card-delete-btn { display: flex; }
 
+    /* ── ADMIN TOOLBAR ── */
+    .admin-toolbar {
+      position: fixed;
+      top: 68px;
+      left: 0; right: 0;
+      z-index: 99;
+      background: rgba(14,17,21,0.97);
+      border-bottom: 1px solid rgba(201,169,110,0.3);
+      backdrop-filter: blur(12px);
+    }
+    .admin-toolbar-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.6rem 2.5rem;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .admin-toolbar-left {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .admin-toolbar-badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--gold);
+    }
+    .admin-toolbar-email {
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+    .admin-toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+    }
+    .admin-toolbar-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--gold);
+      color: #06080a;
+      border: none;
+      border-radius: 2px;
+      padding: 0.5rem 1.1rem;
+      font-family: var(--font-body);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .admin-toolbar-btn:hover { background: var(--gold-deep); color: #fff; }
+    .admin-toolbar-logout {
+      background: none;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 2px;
+      color: var(--muted);
+      font-family: var(--font-body);
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .admin-toolbar-logout:hover { border-color: #ff6060; color: #ff6060; }
+
+    /* Push page content down when toolbar is visible */
+    body.admin-mode-active #main-page { padding-top: 42px; }
+    body.admin-mode-active #model-page { padding-top: calc(68px + 42px); }
+
     .skeleton{background:linear-gradient(90deg,var(--gray-mid) 25%,rgba(255,255,255,.05) 50%,var(--gray-mid) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite}
     @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
     .skeleton-card{border-radius:4px;overflow:hidden;border:1px solid var(--border)}
@@ -2558,6 +2635,23 @@
   <a href="#about" onclick="closeMenu(); showHome();">About</a>
   <a href="#contact" onclick="closeMenu(); showHome();">Booking</a>
   <a href="#" id="mobileAuthLink" onclick="closeMenu(); openMemberModal('login')">Members Login</a>
+</div>
+
+<!-- ══════════ ADMIN TOOLBAR ══════════ -->
+<div class="admin-toolbar" id="adminToolbar" style="display:none">
+  <div class="admin-toolbar-inner">
+    <div class="admin-toolbar-left">
+      <span class="admin-toolbar-badge">🔓 Admin Mode</span>
+      <span class="admin-toolbar-email" id="adminToolbarEmail"></span>
+    </div>
+    <div class="admin-toolbar-right">
+      <button class="admin-toolbar-btn" onclick="openAdmin()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add New Model
+      </button>
+      <button class="admin-toolbar-logout" onclick="doAdminLogout()">Sign Out of Admin</button>
+    </div>
+  </div>
 </div>
 
 <!-- ══════════ MAIN PAGE ══════════ -->
@@ -3681,8 +3775,11 @@ async function doAdminLogin() {
   document.getElementById('adminLoginBtn').innerHTML = `
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
     Admin ✦`;
+  // Show toolbar
+  document.getElementById('adminToolbarEmail').textContent = data.user.email;
+  document.getElementById('adminToolbar').style.display = '';
   showAdminLoggedInPanel();
-  showToast('Admin mode unlocked — click the ✦ button to add models');
+  showToast('Admin mode on — use the toolbar to add models ✦');
 }
 
 function showAdminLoggedInPanel() {
@@ -3699,6 +3796,10 @@ async function doAdminLogout() {
   document.getElementById('adminFab').classList.remove('unlocked');
   document.body.classList.remove('admin-mode-active');
   document.getElementById('adminLoginBtn').classList.remove('admin-active');
+  document.getElementById('adminLoginBtn').innerHTML = `
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    Admin`;
+  document.getElementById('adminToolbar').style.display = 'none';
   closeAdminModal();
   closeAdmin();
   showToast('Signed out of admin.');
