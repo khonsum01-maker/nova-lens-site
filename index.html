@@ -2127,15 +2127,23 @@
       cursor: pointer;
       width: 100%;
       height: 100%;
+      z-index: 10;
+      margin: 0;
+      padding: 0;
     }
     .pug-slot img {
+      position: absolute;
+      inset: 0;
       width: 100%;
       height: 100%;
       object-fit: cover;
       display: none;
+      z-index: 1;
     }
     .pug-slot img.loaded { display: block; }
     .pug-slot .pug-placeholder {
+      position: absolute;
+      inset: 0;
       width: 100%;
       height: 100%;
       display: flex;
@@ -2148,6 +2156,8 @@
       font-size: 0.6rem;
       letter-spacing: 0.12em;
       text-transform: uppercase;
+      pointer-events: none;
+      z-index: 0;
     }
     .pug-slot .pug-rm {
       position: absolute;
@@ -2162,7 +2172,7 @@
       display: none;
       align-items: center;
       justify-content: center;
-      z-index: 2;
+      z-index: 20;
     }
     .pug-slot .pug-rm.show { display: flex; }
 
@@ -3619,7 +3629,7 @@ function selectPlan(planKey,proceed=true) {
 // ═══════════════════════════════════════════
 // Admin emails — add anyone you want to give admin access to
 const ADMIN_EMAILS = [
-  'seircoin@gmail.com', // replace with your real admin email
+  'admin@novalens.studio', // replace with your real admin email
 ];
 
 function openAdminModal() {
@@ -3752,7 +3762,54 @@ function removeStatRow(idx){const el=document.getElementById(`statRow${idx}`);if
 function getStatsFromForm(){const s={};statRows.forEach((_,i)=>{const l=document.getElementById(`stat-label-${i}`);const v=document.getElementById(`stat-value-${i}`);if(l&&v&&l.value.trim())s[l.value.trim()]=parseInt(v.value)||0;});return s;}
 
 // Photo grid
-function buildPhotoUploadGrid(){const g=document.getElementById('photoUploadGrid');g.innerHTML='';photoFiles=Array(9).fill(null);for(let i=0;i<9;i++){const s=document.createElement('div');s.className='pug-slot';s.id=`pugSlot${i}`;s.innerHTML=`<input type="file" accept="image/*" onchange="handlePhotoSlot(${i},this)"><img id="pugImg${i}" alt=""><div class="pug-placeholder"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span>Add</span></div><button class="pug-rm" id="pugRm${i}" onclick="removePhotoSlot(${i})">✕</button>`;g.appendChild(s);}}
+function buildPhotoUploadGrid() {
+  const g = document.getElementById('photoUploadGrid');
+  g.innerHTML = '';
+  photoFiles = Array(9).fill(null);
+  for (let i = 0; i < 9; i++) {
+    const s = document.createElement('div');
+    s.className = 'pug-slot';
+    s.id = `pugSlot${i}`;
+
+    // Hidden file input
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.addEventListener('change', () => handlePhotoSlot(i, input));
+
+    // Preview image
+    const img = document.createElement('img');
+    img.id = `pugImg${i}`;
+    img.alt = '';
+
+    // Placeholder
+    const placeholder = document.createElement('div');
+    placeholder.className = 'pug-placeholder';
+    placeholder.innerHTML = `
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <line x1="12" y1="5" x2="12" y2="19"/>
+        <line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+      <span>Add Photo</span>`;
+
+    // Remove button
+    const rm = document.createElement('button');
+    rm.className = 'pug-rm';
+    rm.id = `pugRm${i}`;
+    rm.textContent = '✕';
+    rm.addEventListener('click', (e) => { e.stopPropagation(); removePhotoSlot(i); });
+
+    s.appendChild(input);
+    s.appendChild(img);
+    s.appendChild(placeholder);
+    s.appendChild(rm);
+
+    // Click the slot → trigger file picker
+    s.addEventListener('click', () => input.click());
+
+    g.appendChild(s);
+  }
+}
 function handlePhotoSlot(idx,input){const file=input.files[0];if(!file)return;photoFiles[idx]=file;const r=new FileReader();r.onload=e=>{const img=document.getElementById(`pugImg${idx}`);img.src=e.target.result;img.classList.add('loaded');document.getElementById(`pugSlot${idx}`).querySelector('.pug-placeholder').style.display='none';document.getElementById(`pugRm${idx}`).classList.add('show');};r.readAsDataURL(file);}
 function removePhotoSlot(idx){photoFiles[idx]=null;const img=document.getElementById(`pugImg${idx}`);img.src='';img.classList.remove('loaded');document.getElementById(`pugSlot${idx}`).querySelector('.pug-placeholder').style.display='';document.getElementById(`pugRm${idx}`).classList.remove('show');const fi=document.getElementById(`pugSlot${idx}`).querySelector('input');if(fi)fi.value='';}
 
