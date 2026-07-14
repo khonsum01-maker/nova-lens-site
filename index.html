@@ -2611,7 +2611,7 @@
     <li><a href="#roster" onclick="showHome()">Models</a></li>
     <li><a href="#about" onclick="showHome()">About</a></li>
     <li><a href="#contact" onclick="showHome()">Booking</a></li>
-    <li id="navAddModel" style="display:none"><a href="#" onclick="toggleAdmin();return false;" style="color:var(--gold);opacity:1">+ Add Model</a></li>
+    <li id="navAddModel" style="display:none"><a href="#" onclick="event.preventDefault();resetDraft();document.getElementById('adminOverlay').classList.add('open');document.getElementById('adminDrawer').classList.add('open');document.body.style.overflow='hidden';adminOpen=true;goStep(0);buildPhotoUploadGrid();renderStatBuilder();" style="color:var(--gold);opacity:1">+ Add Model</a></li>
   </ul>
   <div class="nav-right">
     <!-- Logged OUT state -->
@@ -2646,7 +2646,7 @@
       <span class="admin-toolbar-email" id="adminToolbarEmail"></span>
     </div>
     <div class="admin-toolbar-right">
-      <button class="admin-toolbar-btn" onclick="toggleAdmin()">
+      <button class="admin-toolbar-btn" onclick="resetDraft();document.getElementById('adminOverlay').classList.add('open');document.getElementById('adminDrawer').classList.add('open');document.body.style.overflow='hidden';adminOpen=true;goStep(0);buildPhotoUploadGrid();renderStatBuilder();">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Add New Model
       </button>
