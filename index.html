@@ -729,11 +729,9 @@
 // ══════════════════════════════════════
 // SUPABASE
 // ══════════════════════════════════════
-const { createClient } = supabase;
-const sb = createClient(
-  'https://skhwqqovwrvodsjzwrne.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNraHdxcW92d3J2b2Rzanp3cm5lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1MDgxMzAsImV4cCI6MjA5NTA4NDEzMH0.KVVcB03nPbQcGb5Jp2vvne4nPjpHKvFbUYWzDNwZk-w'
-);
+const SUPABASE_URL = 'https://skhwqqovwrvodsjzwrne.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNraHdxcW92d3J2b2Rzanp3cm5lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1MDgxMzAsImV4cCI6MjA5NTA4NDEzMH0.KVVcB03nPbQcGb5Jp2vvne4nPjpHKvFbUYWzDNwZk-w';
+let sb = null;
 
 // ══════════════════════════════════════
 // STATE
@@ -757,9 +755,14 @@ const STRIPE_LINKS = {
 };
 
 // ══════════════════════════════════════
-// INIT
+// INIT — use window.onload to ensure
+// Supabase CDN is fully loaded first
 // ══════════════════════════════════════
-document.addEventListener('DOMContentLoaded', async () => {
+window.addEventListener('load', async () => {
+  // Init Supabase client
+  sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  // Check existing session
   const { data: { session } } = await sb.auth.getSession();
   if (session) { memberSession = session.user; updateNavForMember(); }
 
