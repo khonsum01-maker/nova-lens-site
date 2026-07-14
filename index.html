@@ -2896,7 +2896,7 @@
                onkeydown="if(event.key==='Enter') doLogin()">
       </div>
       <div class="auth-error" id="loginError"></div>
-      <button class="auth-submit" onclick="doLogin()">Sign In →</button>
+      <button class="auth-submit" id="loginBtn" onclick="doLogin()">Sign In →</button>
       <div class="auth-switch">
         Don't have an account?
         <button onclick="switchAuthTab('signup')">Join as a Member</button>
@@ -2934,7 +2934,7 @@
           <input class="auth-input" id="signupPassword" type="password" placeholder="Min. 8 characters">
         </div>
         <div class="auth-error" id="signupError"></div>
-        <button class="auth-submit" onclick="proceedToCheckout()">Continue to Payment →</button>
+        <button class="auth-submit" id="signupBtn" onclick="proceedToCheckout()">Continue to Payment →</button>
         <div class="auth-switch">Already a member? <button onclick="switchAuthTab('login')">Sign In</button></div>
       </div>
 
@@ -3495,39 +3495,39 @@ function switchAuthTab(tab) {
 }
 
 async function doLogin() {
-  const email=document.getElementById('loginEmail').value.trim();
-  const password=document.getElementById('loginPassword').value;
-  const errEl=document.getElementById('loginError');
-  const btn=document.getElementById('loginBtn');
-  if(!email||!password){errEl.textContent='Please fill in all fields.';return;}
-  btn.textContent='Signing in…';btn.disabled=true;
-  const {data,error}=await sb.auth.signInWithPassword({email,password});
-  btn.textContent='Sign In →';btn.disabled=false;
-  if(error){errEl.textContent=error.message;return;}
-  memberSession=data.user;
+  const email    = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const errEl    = document.getElementById('loginError');
+  const btn      = document.getElementById('loginBtn');
+  if (!email || !password) { errEl.textContent = 'Please fill in all fields.'; return; }
+  if (btn) { btn.textContent = 'Signing in…'; btn.disabled = true; }
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  if (btn) { btn.textContent = 'Sign In →'; btn.disabled = false; }
+  if (error) { errEl.textContent = error.message; return; }
+  memberSession = data.user;
   closeAuthModal();
   updateNavForMember();
   showToast('Welcome back! ✦');
-  if(pendingModelId){const id=pendingModelId;pendingModelId=null;setTimeout(()=>showModel(id),300);}
+  if (pendingModelId) { const id = pendingModelId; pendingModelId = null; setTimeout(() => showModel(id), 300); }
 }
 
 async function proceedToCheckout() {
-  const fname=document.getElementById('signupFname').value.trim();
-  const lname=document.getElementById('signupLname').value.trim();
-  const email=document.getElementById('signupEmail').value.trim();
-  const password=document.getElementById('signupPassword').value;
-  const errEl=document.getElementById('signupError');
-  const btn=document.getElementById('signupBtn');
-  if(!fname||!lname||!email||!password){errEl.textContent='Please fill in all fields.';return;}
-  if(password.length<8){errEl.textContent='Password must be at least 8 characters.';return;}
-  btn.textContent='Creating account…';btn.disabled=true;
-  const {data,error}=await sb.auth.signUp({email,password,options:{data:{full_name:`${fname} ${lname}`}}});
-  btn.textContent='Continue to Payment →';btn.disabled=false;
-  if(error){errEl.textContent=error.message;return;}
-  pendingSignup={name:`${fname} ${lname}`,email,userId:data.user?.id};
-  await sb.from('members').upsert({id:data.user?.id,full_name:`${fname} ${lname}`,plan:selectedPlan,subscription_status:'pending'});
-  sessionStorage.setItem('nl_pending_signup',JSON.stringify({...pendingSignup,plan:selectedPlan}));
-  sessionStorage.setItem('nl_pending_model',pendingModelId||'');
+  const fname    = document.getElementById('signupFname').value.trim();
+  const lname    = document.getElementById('signupLname').value.trim();
+  const email    = document.getElementById('signupEmail').value.trim();
+  const password = document.getElementById('signupPassword').value;
+  const errEl    = document.getElementById('signupError');
+  const btn      = document.getElementById('signupBtn');
+  if (!fname || !lname || !email || !password) { errEl.textContent = 'Please fill in all fields.'; return; }
+  if (password.length < 8) { errEl.textContent = 'Password must be at least 8 characters.'; return; }
+  if (btn) { btn.textContent = 'Creating account…'; btn.disabled = true; }
+  const { data, error } = await sb.auth.signUp({ email, password, options: { data: { full_name: `${fname} ${lname}` } } });
+  if (btn) { btn.textContent = 'Continue to Payment →'; btn.disabled = false; }
+  if (error) { errEl.textContent = error.message; return; }
+  pendingSignup = { name: `${fname} ${lname}`, email, userId: data.user?.id };
+  await sb.from('members').upsert({ id: data.user?.id, full_name: `${fname} ${lname}`, plan: selectedPlan, subscription_status: 'pending' });
+  sessionStorage.setItem('nl_pending_signup', JSON.stringify({ ...pendingSignup, plan: selectedPlan }));
+  sessionStorage.setItem('nl_pending_model', pendingModelId || '');
   updateCheckoutSummary();
   showCheckoutStep('payment');
 }
@@ -3619,7 +3619,7 @@ function selectPlan(planKey,proceed=true) {
 // ═══════════════════════════════════════════
 // Admin emails — add anyone you want to give admin access to
 const ADMIN_EMAILS = [
-  'khonsum01@gmail.com', // replace with your real admin email
+  'admin@novalens.studio', // replace with your real admin email
 ];
 
 function openAdminModal() {
