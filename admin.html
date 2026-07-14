@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NOVA LENS | Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --black: #06080a; --gray: #0e1115; --gray-mid: #171b21;
+      --white: #eef2f5; --gold: #c9a96e; --gold-deep: #a8833e;
+      --muted: #5a6272; --border: rgba(201,169,110,0.14);
+      --font-display: 'Bebas Neue', sans-serif;
+      --font-body: 'DM Sans', sans-serif;
+    }
+    body { background: var(--black); color: var(--white); font-family: var(--font-body); min-height: 100vh; }
+
+    /* ── LOGIN SCREEN ── */
+    .login-screen {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      background: radial-gradient(ellipse 60% 50% at 50% 40%, rgba(201,169,110,0.08) 0%, transparent 70%), var(--black);
+    }
+    .login-box {
+      background: var(--gray);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      width: min(420px, 100%);
+      padding: 3rem 2.5rem;
+      text-align: center;
+    }
+    .login-logo { font-family: var(--font-display); font-size: 1.8rem; letter-spacing: .1em; color: var(--gold); margin-bottom: .3rem; }
+    .login-title { font-family: var(--font-display); font-size: 2.5rem; letter-spacing: .04em; margin-bottom: .5rem; }
+    .login-sub { font-size: .85rem; color: var(--muted); margin-bottom: 2rem; line-height: 1.5; }
+    .login-group { margin-bottom: 1.1rem; text-align: left; }
+    .login-label { display: block; font-size: .68rem; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); margin-bottom: .45rem; }
+    .login-input { width: 100%; background: rgba(201,169,110,.05); border: 1px solid rgba(201,169,110,.2); border-radius: 2px; padding: .85rem 1rem; color: var(--white); font-family: var(--font-body); font-size: .95rem; outline: none; transition: border-color .2s; }
+    .login-input:focus { border-color: var(--gold); }
+    .login-input::placeholder { color: var(--muted); opacity: .5; }
+    .login-btn { width: 100%; background: var(--gold); color: #06080a; border: none; border-radius: 2px; padding: 1rem; font-family: var(--font-body); font-size: .85rem; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; cursor: pointer; transition: background .2s; margin-top: .5rem; }
+    .login-btn:hover { background: var(--gold-deep); color: #fff; }
+    .login-error { font-size: .75rem; color: #ff7070; min-height: 1rem; margin-bottom: .5rem; text-align: left; }
+    .login-back { display: inline-block; margin-top: 1.5rem; font-size: .75rem; color: var(--muted); text-decoration: none; letter-spacing: .1em; text-transform: uppercase; transition: color .2s; }
+    .login-back:hover { color: var(--gold); }
+
+    /* ── ADMIN DASHBOARD ── */
+    .admin-screen { display: none; min-height: 100vh; }
+
+    /* Top bar */
+    .admin-topbar {
+      background: var(--gray);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .topbar-logo { font-family: var(--font-display); font-size: 1.4rem; letter-spacing: .08em; color: var(--gold); }
+    .topbar-badge { font-size: .7rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--gold); background: rgba(201,169,110,.1); border: 1px solid rgba(201,169,110,.25); border-radius: 20px; padding: .3rem .8rem; }
+    .topbar-right { display: flex; align-items: center; gap: 1rem; }
+    .topbar-email { font-size: .8rem; color: var(--muted); }
+    .topbar-btn { background: var(--gold); color: #06080a; border: none; border-radius: 2px; padding: .5rem 1.2rem; font-family: var(--font-body); font-size: .75rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; cursor: pointer; transition: background .2s; }
+    .topbar-btn:hover { background: var(--gold-deep); color: #fff; }
+    .topbar-logout { background: none; border: 1px solid rgba(255,255,255,.1); border-radius: 2px; color: var(--muted); font-family: var(--font-body); font-size: .72rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; padding: .5rem 1rem; cursor: pointer; transition: all .2s; }
+    .topbar-logout:hover { border-color: #ff6060; color: #ff6060; }
+
+    /* Main layout */
+    .admin-layout { display: grid; grid-template-columns: 320px 1fr; min-height: calc(100vh - 64px); }
+
+    /* Sidebar — form */
+    .admin-sidebar {
+      background: var(--gray);
+      border-right: 1px solid var(--border);
+      padding: 2rem;
+      overflow-y: auto;
+      max-height: calc(100vh - 64px);
+      position: sticky;
+      top: 64px;
+    }
+    .sidebar-title { font-family: var(--font-display); font-size: 1.6rem; letter-spacing: .06em; margin-bottom: 1.5rem; color: var(--white); }
+
+    /* Tabs */
+    .form-tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 1.5rem; }
+    .form-tab { flex: 1; background: none; border: none; border-bottom: 2px solid transparent; margin-bottom: -1px; padding: .6rem .3rem; font-family: var(--font-body); font-size: .68rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); cursor: pointer; transition: color .2s, border-color .2s; }
+    .form-tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* Form fields */
+    .field { margin-bottom: 1.2rem; }
+    .field label { display: block; font-size: .68rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-bottom: .4rem; }
+    .field input, .field select, .field textarea {
+      width: 100%; background: rgba(201,169,110,.05); border: 1px solid rgba(201,169,110,.2);
+      border-radius: 2px; padding: .75rem 1rem; color: var(--white); font-family: var(--font-body);
+      font-size: .88rem; outline: none; transition: border-color .2s;
+    }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--gold); }
+    .field input::placeholder, .field textarea::placeholder { color: var(--muted); opacity: .5; }
+    .field select { cursor: pointer; }
+    .field select option { background: var(--black); }
+    .field textarea { resize: vertical; min-height: 100px; }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; }
+
+    /* Cover upload */
+    .cover-upload-zone {
+      width: 100%; aspect-ratio: 3/4; max-height: 200px;
+      border: 1.5px dashed rgba(201,169,110,.3); border-radius: 4px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: .6rem; cursor: pointer; position: relative; overflow: hidden;
+      background: var(--gray-mid); transition: border-color .2s;
+      margin-bottom: .5rem;
+    }
+    .cover-upload-zone:hover { border-color: var(--gold); }
+    .cover-upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; z-index: 2; }
+    .cover-upload-zone img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: none; }
+    .cover-upload-zone img.show { display: block; }
+    .cover-upload-zone .placeholder { display: flex; flex-direction: column; align-items: center; gap: .4rem; color: var(--muted); opacity: .6; font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; pointer-events: none; }
+    .cover-change-btn { width: 100%; background: none; border: 1px solid var(--border); border-radius: 2px; color: var(--muted); font-size: .7rem; letter-spacing: .1em; text-transform: uppercase; padding: .4rem; cursor: pointer; transition: all .2s; display: none; margin-bottom: .5rem; }
+    .cover-change-btn:hover { border-color: var(--gold); color: var(--gold); }
+    .cover-change-btn.show { display: block; }
+
+    /* Stats builder */
+    .stats-builder { display: flex; flex-direction: column; gap: .5rem; margin-bottom: .6rem; }
+    .stat-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: .4rem; align-items: center; }
+    .stat-row input { padding: .55rem .75rem; font-size: .82rem; }
+    .stat-rm { width: 28px; height: 28px; background: rgba(255,80,80,.1); border: 1px solid rgba(255,80,80,.25); border-radius: 2px; color: #ff6060; cursor: pointer; font-size: .9rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .stat-rm:hover { background: rgba(255,80,80,.2); }
+    .add-stat { width: 100%; background: none; border: 1px dashed rgba(201,169,110,.3); border-radius: 2px; color: var(--gold); font-size: .7rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; padding: .5rem; cursor: pointer; transition: all .2s; }
+    .add-stat:hover { border-color: var(--gold); background: rgba(201,169,110,.05); }
+
+    /* Photo grid upload */
+    .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: .8rem; }
+    .photo-slot {
+      aspect-ratio: 3/4; border: 1.5px dashed rgba(201,169,110,.25); border-radius: 2px;
+      position: relative; overflow: hidden; background: var(--gray-mid);
+      cursor: pointer; transition: border-color .2s;
+    }
+    .photo-slot:hover { border-color: var(--gold); }
+    .photo-slot input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; z-index: 10; }
+    .photo-slot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: none; z-index: 1; }
+    .photo-slot img.show { display: block; }
+    .photo-slot .ph { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .3rem; color: var(--muted); opacity: .5; font-size: .58rem; letter-spacing: .1em; text-transform: uppercase; pointer-events: none; z-index: 0; }
+    .photo-slot .rm-btn { position: absolute; top: 4px; right: 4px; width: 20px; height: 20px; background: rgba(6,8,10,.8); border: none; border-radius: 50%; color: #ff8080; font-size: .75rem; cursor: pointer; display: none; align-items: center; justify-content: center; z-index: 20; }
+    .photo-slot .rm-btn.show { display: flex; }
+
+    /* Video entries */
+    .video-list { display: flex; flex-direction: column; gap: .8rem; margin-bottom: .8rem; }
+    .video-entry { background: rgba(201,169,110,.04); border: 1px solid var(--border); border-radius: 3px; padding: 1rem; }
+    .video-entry-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: .8rem; }
+    .video-type-label { font-size: .65rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--gold); }
+    .video-rm { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1rem; transition: color .2s; }
+    .video-rm:hover { color: #ff6060; }
+    .video-btns { display: flex; gap: .5rem; flex-wrap: wrap; }
+    .video-add-btn { flex: 1; min-width: 90px; background: none; border: 1px dashed rgba(201,169,110,.3); border-radius: 2px; color: var(--gold); font-size: .68rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; padding: .6rem .4rem; cursor: pointer; transition: all .2s; display: flex; align-items: center; justify-content: center; gap: .3rem; }
+    .video-add-btn:hover { border-color: var(--gold); background: rgba(201,169,110,.05); }
+
+    /* Progress bar */
+    .progress-bar-wrap { width: 100%; height: 4px; background: rgba(201,169,110,.15); border-radius: 2px; margin: .5rem 0; overflow: hidden; display: none; }
+    .progress-bar-wrap.show { display: block; }
+    .progress-bar { height: 100%; background: var(--gold); border-radius: 2px; width: 0%; transition: width .3s; }
+
+    /* Save button */
+    .save-btn { width: 100%; background: var(--gold); color: #06080a; border: none; border-radius: 2px; padding: 1rem; font-family: var(--font-body); font-size: .85rem; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; cursor: pointer; transition: background .2s; margin-top: .5rem; }
+    .save-btn:hover { background: var(--gold-deep); color: #fff; }
+    .save-btn:disabled { opacity: .6; cursor: not-allowed; }
+
+    /* Right panel — model list */
+    .admin-content { padding: 2rem; overflow-y: auto; }
+    .content-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+    .content-title { font-family: var(--font-display); font-size: 2rem; letter-spacing: .04em; }
+    .model-count { font-size: .78rem; color: var(--muted); }
+
+    .models-table { width: 100%; border-collapse: collapse; }
+    .models-table th { font-size: .68rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); padding: .6rem 1rem; text-align: left; border-bottom: 1px solid var(--border); }
+    .models-table td { padding: .9rem 1rem; border-bottom: 1px solid rgba(201,169,110,.07); vertical-align: middle; font-size: .88rem; }
+    .models-table tr:hover td { background: rgba(201,169,110,.03); }
+    .model-thumb { width: 44px; height: 56px; object-fit: cover; border-radius: 2px; background: var(--gray-mid); display: block; }
+    .model-thumb-placeholder { width: 44px; height: 56px; background: var(--gray-mid); border-radius: 2px; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: .6rem; }
+    .badge { display: inline-block; background: rgba(201,169,110,.12); border: 1px solid rgba(201,169,110,.25); border-radius: 2px; padding: .15rem .55rem; font-size: .65rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--gold); }
+    .del-btn { background: none; border: 1px solid rgba(255,80,80,.25); border-radius: 2px; color: #ff7070; font-size: .72rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; padding: .3rem .8rem; cursor: pointer; transition: all .2s; }
+    .del-btn:hover { background: rgba(255,80,80,.15); border-color: #ff6060; }
+
+    .empty-state { text-align: center; padding: 5rem 2rem; color: var(--muted); }
+    .empty-state p { font-size: .95rem; margin-top: 1rem; }
+
+    /* Toast */
+    .toast { position: fixed; bottom: 2rem; right: 2rem; background: var(--gray); border: 1px solid var(--gold); border-radius: 3px; padding: .9rem 1.4rem; font-size: .82rem; color: var(--white); z-index: 999; display: flex; align-items: center; gap: .6rem; transform: translateY(1rem); opacity: 0; transition: opacity .3s, transform .3s; pointer-events: none; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast-icon { color: var(--gold); }
+
+    @media (max-width: 768px) {
+      .admin-layout { grid-template-columns: 1fr; }
+      .admin-sidebar { position: static; max-height: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══ LOGIN SCREEN ══ -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">NOVA LENS</div>
+    <div class="login-title">ADMIN PANEL</div>
+    <p class="login-sub">Sign in with your admin credentials to manage the model roster.</p>
+    <div class="login-group">
+      <label class="login-label">Email</label>
+      <input class="login-input" id="loginEmail" type="email" placeholder="admin@youremail.com" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="login-group">
+      <label class="login-label">Password</label>
+      <input class="login-input" id="loginPassword" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="login-error" id="loginError"></div>
+    <button class="login-btn" id="loginBtn" onclick="doLogin()">Sign In →</button>
+    <a href="index.html" class="login-back">← Back to site</a>
+  </div>
+</div>
+
+<!-- ══ ADMIN DASHBOARD ══ -->
+<div class="admin-screen" id="adminScreen">
+
+  <!-- Top bar -->
+  <div class="admin-topbar">
+    <div style="display:flex;align-items:center;gap:1rem">
+      <div class="topbar-logo">NOVA LENS</div>
+      <div class="topbar-badge">🔓 Admin</div>
+    </div>
+    <div class="topbar-right">
+      <span class="topbar-email" id="topbarEmail"></span>
+      <a href="index.html" class="topbar-btn" target="_blank">View Site ↗</a>
+      <button class="topbar-logout" onclick="doLogout()">Sign Out</button>
+    </div>
+  </div>
+
+  <div class="admin-layout">
+
+    <!-- LEFT: ADD MODEL FORM -->
+    <div class="admin-sidebar">
+      <div class="sidebar-title">NEW MODEL</div>
+
+      <div class="form-tabs">
+        <button class="form-tab active" onclick="switchTab('profile',this)">① Profile</button>
+        <button class="form-tab" onclick="switchTab('photos',this)">② Photos</button>
+        <button class="form-tab" onclick="switchTab('videos',this)">③ Videos</button>
+      </div>
+
+      <!-- PROFILE TAB -->
+      <div class="tab-panel active" id="tabProfile">
+        <div class="field">
+          <label>Cover Photo</label>
+          <div class="cover-upload-zone" id="coverZone">
+            <input type="file" accept="image/*" id="coverInput" onchange="handleCover(this)">
+            <img id="coverPreview" alt="">
+            <div class="placeholder">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              <span>Click to upload</span>
+            </div>
+          </div>
+          <button class="cover-change-btn" id="coverChangeBtn" onclick="document.getElementById('coverInput').click()">Change Photo</button>
+        </div>
+
+        <div class="field-row">
+          <div class="field"><label>First Name *</label><input type="text" id="fname" placeholder="Sofia"></div>
+          <div class="field"><label>Last Name *</label><input type="text" id="lname" placeholder="Vidal"></div>
+        </div>
+
+        <div class="field">
+          <label>Category *</label>
+          <select id="category">
+            <option value="">— Select —</option>
+            <option>Editorial</option><option>Commercial</option><option>Fashion</option>
+            <option>Beauty</option><option>Runway</option><option>Fitness</option>
+            <option>Lifestyle</option><option>Print</option>
+          </select>
+        </div>
+
+        <div class="field"><label>Location</label><input type="text" id="location" placeholder="New York, NY"></div>
+        <div class="field"><label>Bio</label><textarea id="bio" placeholder="Short description of the model's background and strengths..."></textarea></div>
+
+        <div class="field">
+          <label>Stats</label>
+          <div class="stats-builder" id="statsBuilder"></div>
+          <button class="add-stat" onclick="addStat()">+ Add Stat</button>
+        </div>
+
+        <button class="save-btn" id="saveBtn" onclick="saveModel()">✦ Save Model</button>
+        <div class="progress-bar-wrap" id="saveProgress"><div class="progress-bar" id="saveProgressBar"></div></div>
+      </div>
+
+      <!-- PHOTOS TAB -->
+      <div class="tab-panel" id="tabPhotos">
+        <p style="font-size:.82rem;color:var(--muted);line-height:1.7;margin-bottom:1.2rem">Upload up to <strong style="color:var(--gold)">9 portfolio photos</strong>. Click any slot to choose.</p>
+        <div class="photo-grid" id="photoGrid"></div>
+        <div class="progress-bar-wrap" id="photosProgress"><div class="progress-bar" id="photosProgressBar"></div></div>
+        <p style="font-size:.7rem;color:var(--muted);margin-top:.5rem">JPG, PNG, WEBP · Max 10MB each</p>
+        <button class="save-btn" style="margin-top:1.5rem" onclick="saveModel()">✦ Save Model</button>
+      </div>
+
+      <!-- VIDEOS TAB -->
+      <div class="tab-panel" id="tabVideos">
+        <p style="font-size:.82rem;color:var(--muted);line-height:1.7;margin-bottom:1.2rem">Add YouTube links, Vimeo links, or upload video files.</p>
+        <div class="video-list" id="videoList"></div>
+        <div class="video-btns">
+          <button class="video-add-btn" onclick="addVideo('file')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Upload
+          </button>
+          <button class="video-add-btn" onclick="addVideo('youtube')">▶ YouTube</button>
+          <button class="video-add-btn" onclick="addVideo('vimeo')">◎ Vimeo</button>
+        </div>
+        <button class="save-btn" style="margin-top:1.5rem" onclick="saveModel()">✦ Save Model</button>
+      </div>
+
+    </div>
+
+    <!-- RIGHT: MODEL LIST -->
+    <div class="admin-content">
+      <div class="content-header">
+        <div class="content-title">ROSTER</div>
+        <div class="model-count" id="modelCount">Loading…</div>
+      </div>
+
+      <div id="modelsTableWrap">
+        <table class="models-table">
+          <thead>
+            <tr>
+              <th>Photo</th>
+              <th>Name</th>
+              <th>Category</th>
+              <th>Location</th>
+              <th>Photos</th>
+              <th>Added</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="modelsTableBody">
+            <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:3rem">Loading models…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"><span class="toast-icon">✦</span><span id="toastMsg"></span></div>
+
+<script>
+// ══════════════════════════════════
+// SUPABASE
+// ══════════════════════════════════
+const { createClient } = supabase;
+const sb = createClient(
+  'https://skhwqqovwrvodsjzwrne.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNraHdxcW92d3J2b2Rzanp3cm5lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1MDgxMzAsImV4cCI6MjA5NTA4NDEzMH0.KVVcB03nPbQcGb5Jp2vvne4nPjpHKvFbUYWzDNwZk-w'
+);
+
+// ══════════════════════════════════
+// ADMIN EMAILS — add yours here
+// ══════════════════════════════════
+const ADMIN_EMAILS = [
+  'admin@novalens.studio', // replace with your real email
+];
+
+// ══════════════════════════════════
+// STATE
+// ══════════════════════════════════
+let coverFile   = null;
+let photoFiles  = Array(9).fill(null);
+let videoCount  = 0;
+let statCount   = 0;
+let models      = [];
+
+// ══════════════════════════════════
+// INIT
+// ══════════════════════════════════
+document.addEventListener('DOMContentLoaded', async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session && ADMIN_EMAILS.includes(session.user.email)) {
+    showDashboard(session.user.email);
+  }
+  buildPhotoGrid();
+  buildStats();
+});
+
+// ══════════════════════════════════
+// LOGIN / LOGOUT
+// ══════════════════════════════════
+async function doLogin() {
+  const email    = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const errEl    = document.getElementById('loginError');
+  const btn      = document.getElementById('loginBtn');
+
+  if (!email || !password) { errEl.textContent = 'Please fill in all fields.'; return; }
+
+  btn.textContent = 'Signing in…'; btn.disabled = true;
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  btn.textContent = 'Sign In →'; btn.disabled = false;
+
+  if (error) { errEl.textContent = error.message; return; }
+  if (!ADMIN_EMAILS.includes(data.user.email)) {
+    await sb.auth.signOut();
+    errEl.textContent = 'This account does not have admin access.';
+    return;
+  }
+
+  showDashboard(data.user.email);
+}
+
+async function doLogout() {
+  await sb.auth.signOut();
+  document.getElementById('adminScreen').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+}
+
+function showDashboard(email) {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('adminScreen').style.display = 'block';
+  document.getElementById('topbarEmail').textContent = email;
+  loadModels();
+}
+
+// ══════════════════════════════════
+// LOAD MODELS
+// ══════════════════════════════════
+async function loadModels() {
+  const { data, error } = await sb
+    .from('models')
+    .select('*, model_photos(id)')
+    .order('created_at', { ascending: false });
+
+  if (error) { showToast('Error loading models'); return; }
+
+  models = data || [];
+  document.getElementById('modelCount').textContent = `${models.length} model${models.length !== 1 ? 's' : ''}`;
+  renderTable();
+}
+
+function renderTable() {
+  const tbody = document.getElementById('modelsTableBody');
+  if (models.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:3rem">No models yet. Add your first one using the form.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = models.map(m => `
+    <tr>
+      <td>${m.cover_url
+        ? `<img class="model-thumb" src="${m.cover_url}" alt="${m.name}">`
+        : `<div class="model-thumb-placeholder"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></div>`
+      }</td>
+      <td><strong>${m.name}</strong></td>
+      <td><span class="badge">${m.category||'—'}</span></td>
+      <td style="color:var(--muted);font-size:.82rem">${m.nationality||'—'}</td>
+      <td style="color:var(--muted);font-size:.82rem">${(m.model_photos||[]).length} photos</td>
+      <td style="color:var(--muted);font-size:.82rem">${new Date(m.created_at).toLocaleDateString()}</td>
+      <td><button class="del-btn" onclick="deleteModel('${m.id}')">Delete</button></td>
+    </tr>`).join('');
+}
+
+async function deleteModel(id) {
+  if (!confirm('Delete this model and all their media?')) return;
+  const { error } = await sb.from('models').delete().eq('id', id);
+  if (error) { showToast('Error: ' + error.message); return; }
+  models = models.filter(m => m.id !== id);
+  document.getElementById('modelCount').textContent = `${models.length} model${models.length !== 1 ? 's' : ''}`;
+  renderTable();
+  showToast('Model deleted');
+}
+
+// ══════════════════════════════════
+// TABS
+// ══════════════════════════════════
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.form-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById(`tab${name.charAt(0).toUpperCase()+name.slice(1)}`).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ══════════════════════════════════
+// COVER PHOTO
+// ══════════════════════════════════
+function handleCover(input) {
+  const file = input.files[0]; if (!file) return;
+  coverFile = file;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = document.getElementById('coverPreview');
+    img.src = e.target.result; img.classList.add('show');
+    document.querySelector('.cover-upload-zone .placeholder').style.display = 'none';
+    document.getElementById('coverChangeBtn').classList.add('show');
+  };
+  reader.readAsDataURL(file);
+}
+
+// ══════════════════════════════════
+// STATS BUILDER
+// ══════════════════════════════════
+function buildStats() {
+  addStat('Shoots', '');
+}
+function addStat(label='', value='') {
+  const idx = statCount++;
+  const builder = document.getElementById('statsBuilder');
+  const row = document.createElement('div');
+  row.className = 'stat-row'; row.id = `statRow${idx}`;
+  row.innerHTML = `
+    <input type="text" placeholder="Label" id="statLabel${idx}" value="${label}">
+    <input type="number" placeholder="Value" id="statValue${idx}" value="${value}" min="0">
+    <button class="stat-rm" onclick="this.parentElement.remove()">✕</button>`;
+  builder.appendChild(row);
+}
+function getStats() {
+  const stats = {};
+  document.querySelectorAll('.stat-row').forEach(row => {
+    const l = row.querySelector('input[type="text"]').value.trim();
+    const v = row.querySelector('input[type="number"]').value;
+    if (l) stats[l] = parseInt(v) || 0;
+  });
+  return stats;
+}
+
+// ══════════════════════════════════
+// PHOTO GRID
+// ══════════════════════════════════
+function buildPhotoGrid() {
+  const grid = document.getElementById('photoGrid');
+  grid.innerHTML = '';
+  photoFiles = Array(9).fill(null);
+  for (let i = 0; i < 9; i++) {
+    const slot = document.createElement('div');
+    slot.className = 'photo-slot';
+    slot.id = `slot${i}`;
+
+    const input = document.createElement('input');
+    input.type = 'file'; input.accept = 'image/*';
+    input.addEventListener('change', () => handlePhoto(i, input));
+
+    const img = document.createElement('img');
+    img.id = `slotImg${i}`; img.alt = '';
+
+    const ph = document.createElement('div');
+    ph.className = 'ph';
+    ph.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span>Add</span>`;
+
+    const rm = document.createElement('button');
+    rm.className = 'rm-btn'; rm.id = `slotRm${i}`; rm.textContent = '✕';
+    rm.addEventListener('click', e => { e.stopPropagation(); removePhoto(i); });
+
+    slot.appendChild(input); slot.appendChild(img); slot.appendChild(ph); slot.appendChild(rm);
+    slot.addEventListener('click', () => input.click());
+    grid.appendChild(slot);
+  }
+}
+function handlePhoto(idx, input) {
+  const file = input.files[0]; if (!file) return;
+  photoFiles[idx] = file;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = document.getElementById(`slotImg${idx}`);
+    img.src = e.target.result; img.classList.add('show');
+    document.getElementById(`slot${idx}`).querySelector('.ph').style.display = 'none';
+    document.getElementById(`slotRm${idx}`).classList.add('show');
+  };
+  reader.readAsDataURL(file);
+}
+function removePhoto(idx) {
+  photoFiles[idx] = null;
+  const img = document.getElementById(`slotImg${idx}`);
+  img.src = ''; img.classList.remove('show');
+  document.getElementById(`slot${idx}`).querySelector('.ph').style.display = '';
+  document.getElementById(`slotRm${idx}`).classList.remove('show');
+}
+
+// ══════════════════════════════════
+// VIDEOS
+// ══════════════════════════════════
+let _videoFiles = {};
+function addVideo(type) {
+  const idx = videoCount++;
+  const list = document.getElementById('videoList');
+  const entry = document.createElement('div');
+  entry.className = 'video-entry'; entry.id = `vEntry${idx}`;
+  const typeLabel = type === 'file' ? 'Upload File' : type === 'youtube' ? 'YouTube' : 'Vimeo';
+  let inner = `
+    <div class="video-entry-head">
+      <span class="video-type-label">${typeLabel}</span>
+      <button class="video-rm" onclick="document.getElementById('vEntry${idx}').remove()">✕</button>
+    </div>
+    <div class="field" style="margin-bottom:.6rem">
+      <label>Label (optional)</label>
+      <input type="text" id="vLabel${idx}" placeholder="e.g. 2024 Reel">
+    </div>`;
+  if (type === 'file') {
+    inner += `
+      <div style="border:1px dashed rgba(201,169,110,.3);border-radius:2px;padding:1rem;text-align:center;position:relative;cursor:pointer">
+        <input type="file" accept="video/*" id="vFile${idx}" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;z-index:2" onchange="handleVideoFile(${idx},this)">
+        <div style="font-size:.78rem;color:var(--muted)"><strong style="color:var(--gold)">Click</strong> to select · MP4, MOV</div>
+      </div>
+      <p id="vFileName${idx}" style="font-size:.72rem;color:var(--gold);margin-top:.4rem;display:none"></p>`;
+  } else {
+    const ph = type === 'youtube' ? 'https://www.youtube.com/watch?v=...' : 'https://vimeo.com/...';
+    inner += `<div class="field" style="margin-bottom:0"><label>${typeLabel} URL</label><input type="text" id="vUrl${idx}" placeholder="${ph}"></div>`;
+  }
+  entry.dataset.type = type; entry.dataset.idx = idx;
+  entry.innerHTML = inner;
+  list.appendChild(entry);
+}
+function handleVideoFile(idx, input) {
+  const file = input.files[0]; if (!file) return;
+  _videoFiles[idx] = file;
+  const fn = document.getElementById(`vFileName${idx}`);
+  if (fn) { fn.textContent = '✓ ' + file.name; fn.style.display = ''; }
+}
+function getVideos() {
+  const result = [];
+  document.querySelectorAll('.video-entry').forEach(e => {
+    const type = e.dataset.type; const idx = e.dataset.idx;
+    const label = (document.getElementById(`vLabel${idx}`) || {}).value || '';
+    if (type === 'file') {
+      const file = _videoFiles[idx];
+      if (file) result.push({ type: 'file', file, label });
+    } else {
+      const raw = (document.getElementById(`vUrl${idx}`) || {}).value || '';
+      if (raw.trim()) {
+        const src = convertEmbed(type, raw.trim());
+        if (src) result.push({ type, src, label });
+      }
+    }
+  });
+  return result;
+}
+function convertEmbed(type, url) {
+  if (type === 'youtube') { const m = url.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/); return m ? `https://www.youtube.com/embed/${m[1]}` : null; }
+  if (type === 'vimeo')   { const m = url.match(/vimeo\.com\/(\d+)/); return m ? `https://player.vimeo.com/video/${m[1]}` : null; }
+  return null;
+}
+
+// ══════════════════════════════════
+// SAVE MODEL
+// ══════════════════════════════════
+async function saveModel() {
+  const fname = document.getElementById('fname').value.trim();
+  const lname = document.getElementById('lname').value.trim();
+  const cat   = document.getElementById('category').value;
+
+  if (!fname || !lname) { showToast('Please enter a name'); document.getElementById('fname').focus(); return; }
+  if (!cat)              { showToast('Please select a category'); return; }
+
+  const btn = document.getElementById('saveBtn');
+  btn.textContent = 'Saving…'; btn.disabled = true;
+  setProgress(10);
+
+  try {
+    // 1. Upload cover
+    let cover_url = '';
+    if (coverFile) {
+      const ext = coverFile.name.split('.').pop();
+      const path = `covers/${Date.now()}.${ext}`;
+      const { error: upErr } = await sb.storage.from('model-covers').upload(path, coverFile, { upsert: true });
+      if (upErr) throw upErr;
+      const { data: urlData } = sb.storage.from('model-covers').getPublicUrl(path);
+      cover_url = urlData.publicUrl;
+    }
+    setProgress(25);
+
+    // 2. Insert model
+    const { data: newModel, error: mErr } = await sb.from('models').insert({
+      name: `${fname} ${lname}`,
+      category: cat,
+      nationality: document.getElementById('location').value.trim() || '',
+      bio: document.getElementById('bio').value.trim() || '',
+      cover_url,
+      stats: getStats(),
+    }).select().single();
+    if (mErr) throw mErr;
+    setProgress(40);
+
+    // 3. Upload photos
+    const photoEntries = [];
+    const filesToDo = photoFiles.filter(Boolean);
+    for (let i = 0; i < photoFiles.length; i++) {
+      const file = photoFiles[i]; if (!file) continue;
+      const ext = file.name.split('.').pop();
+      const path = `${newModel.id}/${Date.now()}_${i}.${ext}`;
+      const { error: pErr } = await sb.storage.from('model-photos').upload(path, file, { upsert: true });
+      if (pErr) throw pErr;
+      const { data: pUrl } = sb.storage.from('model-photos').getPublicUrl(path);
+      photoEntries.push({ model_id: newModel.id, url: pUrl.publicUrl, position: i });
+      setProgress(40 + Math.round((filesToDo.indexOf(file) / filesToDo.length) * 40));
+    }
+    if (photoEntries.length) {
+      const { error: phErr } = await sb.from('model_photos').insert(photoEntries);
+      if (phErr) throw phErr;
+    }
+    setProgress(85);
+
+    // 4. Videos
+    const videos = getVideos();
+    const videoRows = [];
+    for (let i = 0; i < videos.length; i++) {
+      const v = videos[i];
+      if (v.type === 'file' && v.file) {
+        const ext = v.file.name.split('.').pop();
+        const path = `${newModel.id}/${Date.now()}_${i}.${ext}`;
+        const { error: vErr } = await sb.storage.from('model-videos').upload(path, v.file, { upsert: true });
+        if (vErr) throw vErr;
+        const { data: vUrl } = sb.storage.from('model-videos').getPublicUrl(path);
+        videoRows.push({ model_id: newModel.id, type: 'file', src: vUrl.publicUrl, label: v.label, position: i });
+      } else if (v.src) {
+        videoRows.push({ model_id: newModel.id, type: v.type, src: v.src, label: v.label, position: i });
+      }
+    }
+    if (videoRows.length) {
+      const { error: vrErr } = await sb.from('model_videos').insert(videoRows);
+      if (vrErr) throw vrErr;
+    }
+    setProgress(100);
+
+    showToast(`${newModel.name} added to the roster ✦`);
+    resetForm();
+    loadModels();
+
+  } catch (err) {
+    console.error(err);
+    showToast('Error: ' + err.message);
+  } finally {
+    btn.textContent = '✦ Save Model'; btn.disabled = false;
+    setTimeout(() => setProgress(0, false), 1000);
+  }
+}
+
+function resetForm() {
+  ['fname','lname','location','bio'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('category').value = '';
+  coverFile = null;
+  const img = document.getElementById('coverPreview');
+  img.src = ''; img.classList.remove('show');
+  document.querySelector('.cover-upload-zone .placeholder').style.display = '';
+  document.getElementById('coverChangeBtn').classList.remove('show');
+  document.getElementById('coverInput').value = '';
+  document.getElementById('statsBuilder').innerHTML = '';
+  statCount = 0; buildStats();
+  buildPhotoGrid();
+  document.getElementById('videoList').innerHTML = '';
+  videoCount = 0; _videoFiles = {};
+  switchTab('profile', document.querySelector('.form-tab'));
+}
+
+function setProgress(pct, show=true) {
+  const wrap = document.getElementById('saveProgress');
+  const bar  = document.getElementById('saveProgressBar');
+  if (show) wrap.classList.add('show'); else wrap.classList.remove('show');
+  bar.style.width = pct + '%';
+}
+
+// ══════════════════════════════════
+// TOAST
+// ══════════════════════════════════
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  document.getElementById('toastMsg').textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+}
+</script>
+</body>
+</html>
